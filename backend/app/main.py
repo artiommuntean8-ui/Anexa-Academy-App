@@ -7,7 +7,6 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.init_db import init_db, seed_demo_data
 from app.db.session import SessionLocal
-from app.models.student import Student
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app.main")
@@ -24,10 +23,8 @@ async def lifespan(app: FastAPI):
         init_db()
         db = SessionLocal()
         try:
-            # Check if database has students; if empty, seed demo data
-            if not db.query(Student).first():
-                logger.info("Fresh database detected. Seeding ArkiTech demo data...")
-                seed_demo_data(db)
+            logger.info("Ensuring Python Kids curriculum and demo data...")
+            seed_demo_data(db)
         finally:
             db.close()
         logger.info("Database schema initialized and verified successfully.")

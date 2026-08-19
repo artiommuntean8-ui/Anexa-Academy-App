@@ -47,13 +47,25 @@ def get_current_user(
     return student
 
 
+def get_current_instructor(
+    current_user: Student = Depends(get_current_user)
+) -> Student:
+    """Verify that current authenticated user has instructor or admin privileges."""
+    if current_user.role not in ["admin", "instructor"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acces permis doar profesorilor."
+        )
+    return current_user
+
+
 def get_current_admin(
     current_user: Student = Depends(get_current_user)
 ) -> Student:
     """Verify that current authenticated user has administrative privileges."""
-    if current_user.role not in ["admin", "instructor"]:
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have sufficient permissions"
+            detail="Utilizatorul nu are permisiuni de administrator."
         )
     return current_user

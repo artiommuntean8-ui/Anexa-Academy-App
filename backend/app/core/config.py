@@ -25,13 +25,12 @@ try:
         ALGORITHM: str = "HS256"
         ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days for desktop convenience
         
-        # CORS Settings
+        # CORS Settings — no wildcard when allow_credentials=True
         BACKEND_CORS_ORIGINS: List[str] = [
             "http://localhost",
             "http://localhost:3000",
             "http://localhost:8000",
             "http://127.0.0.1:8000",
-            "*"
         ]
 
         # Database Settings
@@ -65,7 +64,6 @@ except ImportError:
                 "http://localhost:3000",
                 "http://localhost:8000",
                 "http://127.0.0.1:8000",
-                "*"
             ]
         )
         DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_SQLITE_PATH)

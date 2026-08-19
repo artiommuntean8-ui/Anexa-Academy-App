@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.models.student import Student
+from app.models.course import Course
+from app.models.enrollment import Enrollment
 from app.schemas.auth import LoginRequest, RegisterRequest, Token, TokenSwagger
 from app.schemas.student import StudentResponse
 from app.api.deps import get_current_user
@@ -58,8 +60,9 @@ def login_access_token(
     student = db.query(Student).filter(Student.email == form_data.username).first()
     if not student or not verify_password(form_data.password, student.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     if not student.is_active:
         raise HTTPException(
@@ -109,6 +112,11 @@ def register(
     db.add(student)
     db.commit()
     db.refresh(student)
+
+    modules = db.query(Course).all()
+    for module in modules:
+        db.add(Enrollment(student_id=student.id, course_id=module.id, status="active"))
+    db.commit()
 
     access_token = create_access_token(
         subject=student.id,

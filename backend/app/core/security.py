@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 from typing import Any, Union, Optional, Dict
 import bcrypt
 from jose import jwt, JWTError
@@ -31,17 +32,18 @@ def create_access_token(
     extra_claims: Optional[Dict[str, Any]] = None
 ) -> str:
     """Generate a signed JWT access token."""
+    now = datetime.datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.datetime.utcnow() + datetime.timedelta(
+        expire = now + datetime.timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "iat": datetime.datetime.utcnow(),
+        "iat": now,
     }
     if extra_claims:
         to_encode.update(extra_claims)

@@ -72,6 +72,8 @@ class APIClient:
             )
             response.raise_for_status()
             return response.json() if response.content else {}
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
         except requests.exceptions.HTTPError as e:
             detail = self._extract_error_detail(response)
             raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")
@@ -86,6 +88,8 @@ class APIClient:
                 timeout=API_TIMEOUT
             )
             response.raise_for_status()
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
         except requests.exceptions.HTTPError as e:
             detail = self._extract_error_detail(response)
             raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")

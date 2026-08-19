@@ -93,8 +93,8 @@ class LoginView(QWidget):
         email_layout.addWidget(email_lbl)
 
         self.email_input = QLineEdit()
-        self.email_input.setPlaceholderText("ex: student@arkitech.academy")
-        self.email_input.setText("artiom.muntean@arkitech.academy")
+        self.email_input.setPlaceholderText("ex: elev@pythonkids.ro")
+        self.email_input.setText("andrei@pythonkids.ro")
         self.email_input.setStyleSheet("""
             QLineEdit {
                 background-color: #162035;
@@ -121,7 +121,7 @@ class LoginView(QWidget):
         self.pwd_input = QLineEdit()
         self.pwd_input.setEchoMode(QLineEdit.Password)
         self.pwd_input.setPlaceholderText("••••••••••••")
-        self.pwd_input.setText("ArkiTech2026!")
+        self.pwd_input.setText("Elev2026!")
         self.pwd_input.setStyleSheet("""
             QLineEdit {
                 background-color: #162035;
@@ -194,8 +194,8 @@ class LoginView(QWidget):
         main_layout.addWidget(card)
 
     def _fill_demo_credentials(self):
-        self.email_input.setText("artiom.muntean@arkitech.academy")
-        self.pwd_input.setText("ArkiTech2026!")
+        self.email_input.setText("andrei@pythonkids.ro")
+        self.pwd_input.setText("Elev2026!")
         self.error_lbl.hide()
 
     def _handle_login(self):

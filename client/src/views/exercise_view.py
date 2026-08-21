@@ -46,10 +46,32 @@ class ExerciseView(QWidget):
         self.submit_btn.clicked.connect(self.submit_code)
         layout.addWidget(self.submit_btn)
 
+        # Back Button
+        self.back_btn = QPushButton("← Înapoi la Teme")
+        self.back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #94a3b8;
+                font-weight: 600;
+                padding: 8px;
+                border: 1px solid #374151;
+                border-radius: 8px;
+            }
+            QPushButton:hover { background-color: #1f2937; color: white; }
+        """)
+        self.back_btn.clicked.connect(self.go_back)
+        layout.addWidget(self.back_btn)
+
         # Feedback Area
         self.feedback_lbl = QLabel("")
         self.feedback_lbl.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: 600; padding: 10px;")
         layout.addWidget(self.feedback_lbl)
+
+    def go_back(self):
+        # Navigăm înapoi la Teme (Index 2 în main.py)
+        if hasattr(self.window(), "views_stack"):
+            self.window().views_stack.setCurrentIndex(2)
+            self.window().header.set_title("Teme & Proiecte", "Monitorizarea temelor", "Teme")
 
     def submit_code(self):
         code = self.editor.toPlainText()

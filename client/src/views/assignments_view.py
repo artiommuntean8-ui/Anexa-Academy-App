@@ -119,12 +119,13 @@ class AssignmentsView(QWidget):
 
     def _render_table(self):
         self.table.setRowCount(len(self.all_assignments))
+        self.table.cellClicked.connect(self._on_cell_clicked)
 
         for row, a in enumerate(self.all_assignments):
             a_id = a.get("id")
             grade_info = self.student_grades.get(a_id)
 
-            # 1. Title & Desc item
+            # ... (restul codului de randare rămâne la fel)
             title_text = a.get("title", "")
             title_item = QTableWidgetItem(f"  📝  {title_text}")
             title_item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
@@ -162,3 +163,18 @@ class AssignmentsView(QWidget):
             cell_layout.addWidget(badge)
             self.table.setCellWidget(row, 4, cell_widget)
             self.table.setRowHeight(row, 50)
+
+    def _on_cell_clicked(self, row, column):
+        assignment = self.all_assignments[row]
+        
+        # Pregătim datele pentru ExerciseView
+        exercise_data = {
+            "id": assignment.get("id"),
+            "title": assignment.get("title"),
+            "description": assignment.get("description", "Exercițiu de programare Python"),
+            "starter_code": assignment.get("starter_code", "# Scrie codul tău aici\n")
+        }
+        
+        # Navigăm către ExerciseView folosind MainWindow
+        if hasattr(self.window(), "show_exercise"):
+            self.window().show_exercise(exercise_data)

@@ -23,6 +23,7 @@ from client.src.views.courses_view import CoursesView
 from client.src.views.assignments_view import AssignmentsView
 from client.src.views.grades_view import GradesView
 from client.src.views.profile_view import ProfileView
+from client.src.views.exercise_view import ExerciseView
 from client.src.services.auth_service import auth
 
 
@@ -84,12 +85,14 @@ class MainWindow(QMainWindow):
         self.assignments_view = AssignmentsView()
         self.grades_view = GradesView()
         self.profile_view = ProfileView()
+        self.exercise_view = ExerciseView()
 
         self.views_stack.addWidget(self.dashboard_view)    # Index 0
         self.views_stack.addWidget(self.courses_view)      # Index 1
         self.views_stack.addWidget(self.assignments_view)  # Index 2
         self.views_stack.addWidget(self.grades_view)       # Index 3
         self.views_stack.addWidget(self.profile_view)      # Index 4
+        self.views_stack.addWidget(self.exercise_view)     # Index 5
 
         content_layout.addWidget(self.views_stack)
         app_layout.addWidget(content_area)
@@ -117,6 +120,13 @@ class MainWindow(QMainWindow):
         if 0 <= page_index < len(self.NAV_METADATA):
             title, subtitle, breadcrumb = self.NAV_METADATA[page_index]
             self.header.set_title(title, subtitle, breadcrumb)
+    def show_exercise(self, exercise_data):
+        """Transition to the exercise view with specific content."""
+        self.exercise_view.exercise = exercise_data
+        # Update UI components in exercise_view
+        self.views_stack.setCurrentIndex(5)
+        self.header.set_title("Exercițiu", exercise_data.get("title", ""), "Exerciții")
+
 
         self._refresh_current_view()
 

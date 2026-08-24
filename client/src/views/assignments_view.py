@@ -46,6 +46,30 @@ class AssignmentsView(QWidget):
         hc_layout = QHBoxLayout(header_card)
         hc_layout.setContentsMargins(0, 0, 0, 0)
 
+        # Buton pentru Profesor (dacă e cazul)
+        if auth.current_user and auth.current_user.get("role") == "instructor":
+            add_btn = QPushButton("＋ Adaugă Temă")
+            add_btn.clicked.connect(self._open_add_assignment)
+            hc_layout.addWidget(add_btn)
+
+    def _open_add_assignment(self):
+        from client.src.views.add_assignment_dialog import AddAssignmentDialog
+        dialog = AddAssignmentDialog(parent=self)
+        if dialog.exec():
+            self.refresh_data()
+
+            add_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3b82f6;
+                    color: white;
+                    font-weight: 700;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                }
+                QPushButton:hover { background-color: #2563eb; }
+            """)
+            hc_layout.addWidget(add_btn)
+
         info_vbox = QVBoxLayout()
         info_vbox.setSpacing(2)
         h_title = QLabel("Teme de Laborator & Proiecte")

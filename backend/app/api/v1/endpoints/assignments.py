@@ -27,6 +27,19 @@ def list_assignments(
 
 
 @router.post("/", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED, summary="Create lesson")
+@router.post("/", response_model=AssignmentResponse, summary="Create lesson (Instructor only)")
+def create_assignment(
+    assignment_in: AssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: Student = Depends(get_current_instructor),
+) -> Any:
+    assignment = Assignment(**assignment_in.model_dump())
+    db.add(assignment)
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
+
 def create_assignment(
     assignment_in: AssignmentCreate,
     db: Session = Depends(get_db),

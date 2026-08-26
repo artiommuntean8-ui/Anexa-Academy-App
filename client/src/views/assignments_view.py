@@ -49,15 +49,6 @@ class AssignmentsView(QWidget):
         # Buton pentru Profesor (dacă e cazul)
         if auth.current_user and auth.current_user.get("role") == "instructor":
             add_btn = QPushButton("＋ Adaugă Temă")
-            add_btn.clicked.connect(self._open_add_assignment)
-            hc_layout.addWidget(add_btn)
-
-    def _open_add_assignment(self):
-        from client.src.views.add_assignment_dialog import AddAssignmentDialog
-        dialog = AddAssignmentDialog(parent=self)
-        if dialog.exec():
-            self.refresh_data()
-
             add_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #3b82f6;

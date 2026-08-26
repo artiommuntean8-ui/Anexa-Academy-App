@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLineEdit, QTextEdit, QLabel, QPushButton, QMessageBox
 )
 from client.src.services.api_client import api
+from client.src.utils.notification import show_toast
 
 class AddAssignmentDialog(QDialog):
     def __init__(self, course_id=1, parent=None):
@@ -42,7 +43,8 @@ class AddAssignmentDialog(QDialog):
         }
         try:
             api.post("/assignments/", json_data=payload)
-            QMessageBox.information(self, "Succes", "Tema a fost adăugată!")
+            show_toast("Succes", "Tema a fost adăugată cu succes!")
             self.accept()
         except Exception as e:
+            show_toast("Eroare", str(e))
             QMessageBox.critical(self, "Eroare", str(e))

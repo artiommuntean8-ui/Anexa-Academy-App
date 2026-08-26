@@ -14,6 +14,12 @@ class LoginView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("LoginView")
+        self.setStyleSheet("""
+            QWidget#LoginView {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #1e1b4b, stop:1 #0f172a);
+            }
+        """)
+
         self.setStyleSheet("background-color: #090d16;")
 
         main_layout = QVBoxLayout(self)
@@ -25,10 +31,10 @@ class LoginView(QWidget):
         card.setFixedWidth(440)
         card.setStyleSheet("""
             QFrame {
-                background-color: #111827;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 18px;
-                padding: 36px 32px;
+                background-color: rgba(30, 41, 59, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 24px;
+                padding: 40px;
             }
         """)
 

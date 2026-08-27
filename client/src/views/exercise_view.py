@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from client.src.components.code_editor import CodeEditor
 from client.src.services.api_client import api
+from client.src.components.toast import ToastNotification
 
 class ExerciseView(QWidget):
     def __init__(self, exercise_data=None, parent=None):
@@ -62,11 +63,6 @@ class ExerciseView(QWidget):
         self.back_btn.clicked.connect(self.go_back)
         layout.addWidget(self.back_btn)
 
-        # Feedback Area
-        self.feedback_lbl = QLabel("")
-        self.feedback_lbl.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: 600; padding: 10px;")
-        layout.addWidget(self.feedback_lbl)
-
     def go_back(self):
         # Navigăm înapoi la Teme (Index 2 în main.py)
         if hasattr(self.window(), "views_stack"):
@@ -75,19 +71,20 @@ class ExerciseView(QWidget):
 
     def submit_code(self):
         code = self.editor.toPlainText()
-        self.feedback_lbl.setText("Se verifică...")
         
         try:
             # Apelăm endpoint-ul real de validare
             result = api.post("/exercises/validate", json_data={"code": code, "exercise_id": self.exercise.get("id")})
             
             if result.get("status") == "success":
-                self.feedback_lbl.setText(f"✅ {result.get('message')}")
-                self.feedback_lbl.setStyleSheet("color: #34d399; background: rgba(16, 185, 129, 0.1); border-radius: 8px;")
+                msg = f"✅ {result.get('message')}"
             else:
-                self.feedback_lbl.setText(f"❌ {result.get('message')}")
-                self.feedback_lbl.setStyleSheet("color: #f87171; background: rgba(239, 68, 68, 0.1); border-radius: 8px;")
+                msg = f"❌ {result.get('message')}"
+            
+            # Afișăm toast-ul
+            toast = ToastNotification(msg, self)
+            toast.show_toast(self.width() // 2 - 100, self.height() - 60)
                 
         except Exception as e:
-            self.feedback_lbl.setText(f"❌ Eroare de conectare: {str(e)}")
-            self.feedback_lbl.setStyleSheet("color: #f87171; background: rgba(239, 68, 68, 0.1); border-radius: 8px;")
+            toast = ToastNotification(f"❌ Eroare: {str(e)}", self)
+            toast.show_toast(self.width() // 2 - 100, self.height() - 60)

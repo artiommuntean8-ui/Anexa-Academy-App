@@ -1,6 +1,9 @@
+import json
+import os
 from typing import Optional, Dict, Any
 from client.src.services.api_client import api
 
+SESSION_FILE = "session.json"
 
 class AuthService:
     """Authentication and session state service."""
@@ -29,46 +32,44 @@ class AuthService:
         self._token = response.get("access_token")
         self._current_user = response.get("user")
         api.set_token(self._token)
+        self.save_session(self._token, self._current_user)
         return response
 
-    def register(
-        self,
-        student_code: str,
-        full_name: str,
-        email: str,
-        password: str,
-        department: str = "Software Engineering",
-        semester: int = 1
-    ) -> Dict[str, Any]:
-        """Register a new student account and log in."""
-        payload = {
-            "student_code": student_code,
-            "full_name": full_name,
-            "email": email,
-            "password": password,
-            "department": department,
-            "semester": semester
-        }
-        response = api.post("/auth/register", json_data=payload)
-        self._token = response.get("access_token")
-        self._current_user = response.get("user")
-        api.set_token(self._token)
-        return response
+    def save_session(self, token, user):
+        with open(SESSION_FILE, "w") as f:
+            json.dump({"token": token, "user": user}, f)
+
+    def load_session(self) -> bool:
+        if os.path.exists(SESSION_FILE):
+            try:
+                with open(SESSION_FILE, "r") as f:
+                    data = json.load(f)
+                    self._token = data.get("token")
+                    self._current_user = data.get("user")
+                    api.set_token(self._token)
+                    return True
+            except:
+                return False
+        return False
 
     def logout(self) -> None:
         """Clear user session and token."""
         self._token = None
         self._current_user = None
         api.set_token(None)
+        if os.path.exists(SESSION_FILE):
+            os.remove(SESSION_FILE)
 
     def refresh_user_profile(self) -> Optional[Dict[str, Any]]:
         """Fetch fresh user profile from backend."""
         if not self._token:
             return None
-        user_data = api.get("/auth/me")
-        self._current_user = user_data
-        return user_data
-
+        try:
+            user_data = api.get("/auth/me")
+            self._current_user = user_data
+            return user_data
+        except:
+            return None
 
 # Global singleton instance
 auth = AuthService()

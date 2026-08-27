@@ -98,6 +98,13 @@ class MainWindow(QMainWindow):
         app_layout.addWidget(content_area)
 
         self.root_stack.addWidget(self.app_container)
+        # Check for saved session
+        if auth.load_session():
+            self._on_login_success()
+        else:
+            # Initial screen: Login
+            self.root_stack.setCurrentIndex(0)
+
 
         # Initial screen: Login
         self.root_stack.setCurrentIndex(0)

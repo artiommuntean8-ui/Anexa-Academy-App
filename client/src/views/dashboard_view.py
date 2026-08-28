@@ -76,6 +76,24 @@ class DashboardView(QWidget):
 
         self.progress_card = ProgressCard()
         self.layout.addWidget(self.progress_card)
+        # Stats Bar
+        stats_bar = QHBoxLayout()
+        stats_bar.setSpacing(15)
+        self.stats_labels = {}
+        for text in ["Cursuri Active", "Teme Finalizate", "Punctaj Total"]:
+            frame = QFrame()
+            frame.setStyleSheet("background-color: #111827; border-radius: 10px; padding: 10px;")
+            layout_f = QVBoxLayout(frame)
+            lbl = QLabel(text)
+            lbl.setStyleSheet("color: #94a3b8; font-size: 11px;")
+            val = QLabel("-")
+            val.setStyleSheet("color: white; font-size: 16px; font-weight: 800;")
+            layout_f.addWidget(lbl)
+            layout_f.addWidget(val)
+            stats_bar.addWidget(frame)
+            self.stats_labels[text] = val
+        self.layout.addLayout(stats_bar)
+
 
         modules_header = QLabel("Modulele tale Python")
         modules_header.setStyleSheet("color: #ffffff; font-size: 17px; font-weight: 800;")
@@ -88,6 +106,13 @@ class DashboardView(QWidget):
 
         scroll.setWidget(container)
         outer_layout.addWidget(scroll)
+        # Update stats
+        # Punctaj total (simulat)
+        total_score = sum(g.get("score", 0) for g in self.student_grades.values())
+        self.stats_labels["Cursuri Active"].setText(str(len(modules)))
+        self.stats_labels["Teme Finalizate"].setText(str(data.get("completed_lessons", 0)))
+        self.stats_labels["Punctaj Total"].setText(str(int(total_score)))
+
 
     def refresh_data(self):
         user = auth.current_user

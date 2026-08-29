@@ -71,6 +71,25 @@ def record_grade(
 def delete_grade(
     grade_id: int,
     db: Session = Depends(get_db),
+@router.put("/{grade_id}", summary="Update grade and feedback")
+def update_grade(
+    grade_id: int,
+    score: float,
+    feedback: str,
+    db: Session = Depends(get_db),
+    current_user: Student = Depends(get_current_instructor),
+):
+    grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    if not grade:
+        raise HTTPException(status_code=404, detail="Nota nu a fost găsită")
+    
+    grade.score = score
+    grade.feedback = feedback
+    db.commit()
+    db.refresh(grade)
+    return grade
+
+
     current_user: Student = Depends(get_current_instructor),
 ) -> None:
     grade = db.query(Grade).filter(Grade.id == grade_id).first()

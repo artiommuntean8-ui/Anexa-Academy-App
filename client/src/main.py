@@ -24,6 +24,8 @@ from client.src.views.assignments_view import AssignmentsView
 from client.src.views.grades_view import GradesView
 from client.src.views.profile_view import ProfileView
 from client.src.views.exercise_view import ExerciseView
+from client.src.views.student_management_view import StudentManagementView
+
 from client.src.services.auth_service import auth
 
 
@@ -35,6 +37,8 @@ class MainWindow(QMainWindow):
         ("Catalog Cursuri", "Toate cursurile disponibile și înscrieri active", "Cursuri"),
         ("Teme & Proiecte", "Monitorizarea temelor de laborator și a termenelor de predare", "Teme"),
         ("Progres & Note", "Situația notelor obținute și feedback-ul detaliat", "Progres"),
+        ("Gestionare Elevi", "Adaugă și monitorizează elevii din clasă", "Elevi"),
+
         ("Setări & Profil", "Datele contului universitar, securitate și preferințe", "Setări"),
     ]
 
@@ -75,6 +79,15 @@ class MainWindow(QMainWindow):
 
         # Header
         self.header = Header()
+        # Logout Button in Header
+        self.header.logout_btn = QPushButton("Ieșire")
+        self.header.logout_btn.setStyleSheet("""
+            QPushButton { background: transparent; color: #94a3b8; font-weight: 600; }
+            QPushButton:hover { color: #fca5a5; }
+        """)
+        self.header.logout_btn.clicked.connect(self.logout)
+        content_layout.addWidget(self.header.logout_btn)
+
         self.header.refresh_requested.connect(self._refresh_current_view)
         content_layout.addWidget(self.header)
 
@@ -83,6 +96,9 @@ class MainWindow(QMainWindow):
         self.dashboard_view = DashboardView()
         self.courses_view = CoursesView()
         self.assignments_view = AssignmentsView()
+        self.students_view = StudentManagementView()
+        self.views_stack.addWidget(self.students_view)     # Index 6
+
         self.grades_view = GradesView()
         self.profile_view = ProfileView()
         self.exercise_view = ExerciseView()
@@ -120,6 +136,10 @@ class MainWindow(QMainWindow):
         """Clear state and return to login view."""
         auth.logout()
         self.root_stack.setCurrentIndex(0)
+    def logout(self):
+        auth.logout()
+        self.root_stack.setCurrentIndex(0)
+
 
     def _on_page_changed(self, page_index: int):
         self.views_stack.setCurrentIndex(page_index)

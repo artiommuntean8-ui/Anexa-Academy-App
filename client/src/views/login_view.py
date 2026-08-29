@@ -221,6 +221,25 @@ class LoginView(QWidget):
             self.login_successful.emit()
         except RuntimeError as e:
             self._show_error(str(e))
+    def _show_error(self, message: str):
+        self.error_lbl.setText(message)
+        self.error_lbl.show()
+
+class LogoutButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__("Deconectare", parent)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #fca5a5;
+                border: 1px solid #fca5a5;
+                border-radius: 8px;
+                padding: 6px 12px;
+                font-weight: 600;
+            }
+            QPushButton:hover { background-color: #7f1d1d; }
+        """)
+
         except Exception as e:
             self._show_error(f"Eroare neprevăzută: {str(e)}")
         finally:

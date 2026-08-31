@@ -37,6 +37,23 @@ class GradesView(QWidget):
         self.card_gpa = StatCard("Medie Ponderată", "0.0", "⭐", "#10b981", "rgba(16, 185, 129, 0.12)", "Toate evaluările")
         self.card_total_evals = StatCard("Evaluări Finalizate", "0", "📋", "#6366f1", "rgba(99, 102, 241, 0.12)", "Teme notate")
         self.card_status = StatCard("Status Academic", "Excelent", "🏆", "#06b6d4", "rgba(6, 182, 212, 0.12)", "Semestrul 2")
+        export_btn = QPushButton("Exportă CSV")
+        export_btn.clicked.connect(self.export_grades)
+        layout.addWidget(export_btn)
+
+
+    def export_grades(self):
+        import csv
+        from PySide6.QtWidgets import QFileDialog
+        
+        path, _ = QFileDialog.getSaveFileName(self, "Exportă Note", "note.csv", "CSV Files (*.csv)")
+        if path:
+            with open(path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Elev", "Notă", "Feedback"])
+                # Presupunem că datele sunt în tabel
+                for row in range(self.table.rowCount()):
+                    writer.writerow([self.table.item(row, i).text() for i in range(3)])
 
         stats_layout.addWidget(self.card_gpa)
         stats_layout.addWidget(self.card_total_evals)

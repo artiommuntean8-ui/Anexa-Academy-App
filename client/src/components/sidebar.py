@@ -90,6 +90,11 @@ class Sidebar(QWidget):
             ("⚙️  Setări & Profil", 4),
         ]
 
+            self.nav_buttons.append(btn)
+            self.btn_group.addButton(btn, index)
+            btn.clicked.connect(lambda checked, idx=index: self._on_nav_clicked(idx))
+            layout.addWidget(btn)
+
         for text, index in nav_items:
             btn = QPushButton(text)
             btn.setCheckable(True)
@@ -193,6 +198,10 @@ class Sidebar(QWidget):
                 background-color: rgba(239, 68, 68, 0.12);
                 border-color: #ef4444;
                 color: #ffffff;
+    def set_page_visible(self, index, visible):
+        if 0 <= index < len(self.nav_buttons):
+            self.nav_buttons[index].setVisible(visible)
+
             }
         """)
         logout_btn.clicked.connect(self.logout_requested.emit)

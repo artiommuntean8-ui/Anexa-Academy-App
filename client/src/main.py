@@ -113,6 +113,13 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.views_stack)
         app_layout.addWidget(content_area)
 
+    def update_sidebar_visibility(self):
+        """Show/hide tabs based on user role."""
+        is_instructor = auth.current_user and auth.current_user.get("role") == "instructor"
+        
+        # Hide "Gestionare Elevi" (index 6) if not instructor
+        self.sidebar.set_page_visible(6, is_instructor)
+
         self.root_stack.addWidget(self.app_container)
         # Check for saved session
         if auth.load_session():
@@ -128,6 +135,7 @@ class MainWindow(QMainWindow):
     def _on_login_success(self):
         """Transition into authenticated dashboard upon successful login."""
         self.sidebar.update_user_info()
+        self.sidebar.update_sidebar_visibility()  # <--- Adăugat aici apelul
         self.root_stack.setCurrentIndex(1)
         self.sidebar.set_active_index(0)
         self._on_page_changed(0)

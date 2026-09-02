@@ -95,6 +95,19 @@ class Sidebar(QWidget):
             btn.clicked.connect(lambda checked, idx=index: self._on_nav_clicked(idx))
             layout.addWidget(btn)
 
+            # Adăugăm un label pentru badge
+            badge = QLabel("0", btn)
+            badge.setStyleSheet("""
+                background-color: #ef4444; 
+                color: white; 
+                border-radius: 8px; 
+                font-size: 9px; 
+                padding: 2px 5px;
+            """)
+            badge.move(200, 10)
+            badge.hide()
+            btn.badge = badge
+
         for text, index in nav_items:
             btn = QPushButton(text)
             btn.setCheckable(True)
@@ -189,6 +202,19 @@ class Sidebar(QWidget):
                 background-color: transparent;
                 color: #f87171;
                 border: 1px solid rgba(239, 68, 68, 0.25);
+    def update_notifications(self):
+        try:
+            data = api.get("/notifications/unread-count")
+            count = data.get("unread", 0)
+            # Presupunând că indexul 2 este "Teme & Proiecte"
+            if count > 0:
+                self.nav_buttons[2].badge.setText(str(count))
+                self.nav_buttons[2].badge.show()
+            else:
+                self.nav_buttons[2].badge.hide()
+        except:
+            pass
+
                 border-radius: 8px;
                 padding: 8px 12px;
                 font-size: 12px;

@@ -124,6 +124,9 @@ class MainWindow(QMainWindow):
         # Check for saved session
         if auth.load_session():
             self._on_login_success()
+        # Refresh notifications
+        self.sidebar.update_notifications()
+
         else:
             # Initial screen: Login
             self.root_stack.setCurrentIndex(0)

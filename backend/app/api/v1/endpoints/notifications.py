@@ -23,6 +23,19 @@ manager = ConnectionManager()
 @router.websocket('/ws/{client_id}')
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager.connect(websocket)
+@router.get("/unread-count", summary="Get number of pending assignments")
+def get_unread_count(
+    db: Session = Depends(get_db),
+    current_user: Student = Depends(get_current_user)
+):
+    from app.models.assignment import Assignment
+    from app.models.grade import Grade
+    
+    total_assignments = db.query(Assignment).count()
+    graded_assignments = db.query(Grade).filter(Grade.student_id == current_user.id).count()
+    
+    return {"unread": max(0, total_assignments - graded_assignments)}
+
     try:
         while True:
             data = await websocket.receive_text()

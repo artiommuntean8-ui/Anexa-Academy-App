@@ -240,12 +240,3 @@ class LogoutButton(QPushButton):
             QPushButton:hover { background-color: #7f1d1d; }
         """)
 
-        except Exception as e:
-            self._show_error(f"Eroare neprevăzută: {str(e)}")
-        finally:
-            self.login_btn.setEnabled(True)
-            self.login_btn.setText("Autentificare în Cont")
-
-    def _show_error(self, message: str):
-        self.error_lbl.setText(message)
-        self.error_lbl.show()

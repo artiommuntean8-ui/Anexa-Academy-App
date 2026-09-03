@@ -30,14 +30,15 @@ class StudentManagementView(QWidget):
         try:
             students = api.get("/students/")
             self.table.setRowCount(len(students))
-    def filter_students(self, text):
-        for i in range(self.table.rowCount()):
-            item = self.table.item(i, 0)
-            self.table.setRowHidden(i, text.lower() not in item.text().lower())
-
             for row, s in enumerate(students):
                 self.table.setItem(row, 0, QTableWidgetItem(s.get("full_name", "")))
                 self.table.setItem(row, 1, QTableWidgetItem(s.get("student_code", "")))
                 self.table.setItem(row, 2, QTableWidgetItem(s.get("email", "")))
         except Exception as e:
             print(f"Error loading students: {e}")
+
+    def filter_students(self, text):
+        for i in range(self.table.rowCount()):
+            item = self.table.item(i, 0)
+            if item:
+                self.table.setRowHidden(i, text.lower() not in item.text().lower())

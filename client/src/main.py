@@ -124,16 +124,12 @@ class MainWindow(QMainWindow):
         # Check for saved session
         if auth.load_session():
             self._on_login_success()
-        # Refresh notifications
-        self.sidebar.update_notifications()
-
         else:
             # Initial screen: Login
             self.root_stack.setCurrentIndex(0)
-
-
-        # Initial screen: Login
-        self.root_stack.setCurrentIndex(0)
+        
+        # Refresh notifications
+        self.sidebar.update_notifications()
 
     def _on_login_success(self):
         """Transition into authenticated dashboard upon successful login."""

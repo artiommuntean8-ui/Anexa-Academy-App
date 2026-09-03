@@ -90,24 +90,6 @@ class Sidebar(QWidget):
             ("⚙️  Setări & Profil", 4),
         ]
 
-            self.nav_buttons.append(btn)
-            self.btn_group.addButton(btn, index)
-            btn.clicked.connect(lambda checked, idx=index: self._on_nav_clicked(idx))
-            layout.addWidget(btn)
-
-            # Adăugăm un label pentru badge
-            badge = QLabel("0", btn)
-            badge.setStyleSheet("""
-                background-color: #ef4444; 
-                color: white; 
-                border-radius: 8px; 
-                font-size: 9px; 
-                padding: 2px 5px;
-            """)
-            badge.move(200, 10)
-            badge.hide()
-            btn.badge = badge
-
         for text, index in nav_items:
             btn = QPushButton(text)
             btn.setCheckable(True)
@@ -134,8 +116,9 @@ class Sidebar(QWidget):
                     border-left: 4px solid #6366f1;
                 }
             """)
-            self.btn_group.addButton(btn, index)
             self.nav_buttons.append(btn)
+            self.btn_group.addButton(btn, index)
+            btn.clicked.connect(lambda checked, idx=index: self._on_nav_clicked(idx))
             layout.addWidget(btn)
 
         self.btn_group.idClicked.connect(self._on_nav_clicked)

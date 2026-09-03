@@ -71,6 +71,15 @@ def record_grade(
 def delete_grade(
     grade_id: int,
     db: Session = Depends(get_db),
+    current_user: Student = Depends(get_current_instructor),
+):
+    grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    if not grade:
+        raise HTTPException(status_code=404, detail="Completion record not found")
+    db.delete(grade)
+    db.commit()
+    return None
+
 @router.put("/{grade_id}", summary="Update grade and feedback")
 def update_grade(
     grade_id: int,
@@ -88,15 +97,6 @@ def update_grade(
     db.commit()
     db.refresh(grade)
     return grade
-
-
-    current_user: Student = Depends(get_current_instructor),
-) -> None:
-    grade = db.query(Grade).filter(Grade.id == grade_id).first()
-    if not grade:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion record not found")
-    db.delete(grade)
-    db.commit()
 
 
 @router.get("/{grade_id}", response_model=GradeResponse, summary="Get completion details")

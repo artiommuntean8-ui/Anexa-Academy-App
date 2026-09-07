@@ -302,6 +302,49 @@ def validate_code(
     newly_unlocked = []
 
     # Record grade & award achievements if exercise_id given and passed
+            # Record grade & award achievements if exercise_id given and passed
+            if exercise_id and all_passed:
+                try:
+                    ex_id_int = int(exercise_id)
+                    existing_grade = db.query(Grade).filter(
+                        Grade.student_id == current_user.id,
+                        Grade.assignment_id == ex_id_int
+                    ).first()
+
+                    if not existing_grade:
+                        existing_grade = Grade(
+                            student_id=current_user.id,
+                            assignment_id=ex_id_int,
+                            score=score,
+                            feedback="Toate testele automate au fost validate cu succes (Auto-Grader 100%)."
+                        )
+                        db.add(existing_grade)
+                        db.commit()
+                    else:
+                        existing_grade.score = max(existing_grade.score, score)
+                        db.commit()
+
+                    # Award achievements
+                    newly_unlocked = _check_and_award_achievements(db, current_user.id, code, score)
+
+                except Exception as e:
+                    print(f"Error updating grade/achievements: {e}")
+
+            # Salvează încercarea în history (chiar dacă a eșuat sau reușit)
+            if exercise_id:
+                from sqlalchemy import text
+                import datetime
+                db.execute(
+                    text("INSERT INTO attempt_history (grade_id, code, timestamp, feedback) VALUES (:g, :c, :t, :f)"),
+                    {
+                        "g": existing_grade.id if 'existing_grade' in locals() and existing_grade else 0,
+                        "c": code,
+                        "t": datetime.datetime.utcnow(),
+                        "f": eval_res.get("error") if not all_passed else "Success"
+                    }
+                )
+                db.commit()
+
     if exercise_id and all_passed:
         try:
             ex_id_int = int(exercise_id)

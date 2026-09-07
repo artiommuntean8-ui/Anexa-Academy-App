@@ -4,7 +4,7 @@ from PySide6.QtGui import QCursor
 
 
 class Header(QWidget):
-    """Top bar component for page titles, server status badge, and refresh trigger."""
+    """Modern top navigation bar component for page titles, server status badge, and actions."""
 
     refresh_requested = Signal()
 
@@ -13,27 +13,26 @@ class Header(QWidget):
         self.setObjectName("Header")
         self.setStyleSheet("""
             QWidget#Header {
-                background-color: #0d1322;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-                padding: 12px 28px;
+                background-color: #080b11;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             }
         """)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(24, 14, 24, 14)
+        layout.setContentsMargins(28, 16, 28, 16)
         layout.setSpacing(16)
 
         # Title & Subtitle with breadcrumb
         text_layout = QVBoxLayout()
-        text_layout.setSpacing(2)
+        text_layout.setSpacing(3)
 
         self.breadcrumb_label = QLabel("ARKITECH PORTAL  /  PANOU PRINCIPAL")
-        self.breadcrumb_label.setStyleSheet("color: #818cf8; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;")
+        self.breadcrumb_label.setStyleSheet("color: #818cf8; font-size: 10px; font-weight: 800; letter-spacing: 0.8px;")
         text_layout.addWidget(self.breadcrumb_label)
 
         self.title_label = QLabel("Tablou de bord")
         self.title_label.setObjectName("HeaderTitle")
-        self.title_label.setStyleSheet("color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: -0.3px;")
+        self.title_label.setStyleSheet("color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: -0.4px;")
         text_layout.addWidget(self.title_label)
 
         self.subtitle_label = QLabel("Sinteza academică și performanța semestrială curentă")
@@ -48,7 +47,7 @@ class Header(QWidget):
         status_frame = QFrame()
         status_frame.setStyleSheet("""
             QFrame {
-                background-color: rgba(16, 185, 129, 0.1);
+                background-color: rgba(16, 185, 129, 0.08);
                 border: 1px solid rgba(16, 185, 129, 0.25);
                 border-radius: 8px;
                 padding: 6px 12px;
@@ -59,29 +58,29 @@ class Header(QWidget):
         status_layout.setSpacing(8)
 
         dot = QLabel("●")
-        dot.setStyleSheet("color: #10b981; font-size: 11px;")
+        dot.setStyleSheet("color: #10b981; font-size: 10px;")
         status_layout.addWidget(dot)
 
-        status_text = QLabel("Backend Conectat")
-        status_text.setStyleSheet("color: #34d399; font-size: 11px; font-weight: 700;")
+        status_text = QLabel("API Conectat")
+        status_text.setStyleSheet("color: #34d399; font-size: 11px; font-weight: 800;")
         status_layout.addWidget(status_text)
         layout.addWidget(status_frame)
 
         # Refresh button
-        self.refresh_btn = QPushButton("🔄 Actualizează")
+        self.refresh_btn = QPushButton("🔄  Sincronizează")
         self.refresh_btn.setCursor(QCursor(Qt.PointingHandCursor))
         self.refresh_btn.setStyleSheet("""
             QPushButton {
-                background-color: #1e293b;
+                background-color: #111728;
                 color: #e2e8f0;
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 border-radius: 8px;
                 padding: 8px 14px;
                 font-size: 12px;
-                font-weight: 600;
+                font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #334155;
+                background-color: #1b243d;
                 color: #ffffff;
                 border-color: rgba(255, 255, 255, 0.2);
             }
@@ -94,6 +93,6 @@ class Header(QWidget):
         if subtitle:
             self.subtitle_label.setText(subtitle)
         if breadcrumb:
-            self.breadcrumb_label.setText(breadcrumb.upper())
+            self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {breadcrumb.upper()}")
         else:
             self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {title.upper()}")

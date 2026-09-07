@@ -1,6 +1,5 @@
-from typing import Callable
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QButtonGroup, QFrame, QSpacerItem, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QButtonGroup, QFrame
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
@@ -9,7 +8,7 @@ from client.src.services.api_client import api
 
 
 class Sidebar(QWidget):
-    """Modern fixed sidebar navigation component with SaaS aesthetics."""
+    """Ultra-modern Obsidian SaaS sidebar navigation component."""
 
     page_changed = Signal(int)
     logout_requested = Signal()
@@ -17,32 +16,33 @@ class Sidebar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("Sidebar")
-        self.setFixedWidth(260)
+        self.setFixedWidth(270)
 
         self.setStyleSheet("""
             QWidget#Sidebar {
-                background-color: #0d1322;
+                background-color: #0a0e1a;
                 border-right: 1px solid rgba(255, 255, 255, 0.07);
             }
         """)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 24, 16, 20)
-        layout.setSpacing(12)
+        layout.setSpacing(10)
 
-        # 1. Brand header with glowing pill logo
-        brand_layout = QVBoxLayout()
-        brand_layout.setSpacing(3)
-
-        title_layout = QHBoxLayout()
-        title_layout.setSpacing(10)
+        # 1. Brand Logo Header
+        brand_frame = QFrame()
+        brand_frame.setStyleSheet("background: transparent;")
+        brand_layout = QHBoxLayout(brand_frame)
+        brand_layout.setContentsMargins(4, 0, 4, 0)
+        brand_layout.setSpacing(12)
 
         logo_box = QFrame()
-        logo_box.setFixedSize(36, 36)
+        logo_box.setFixedSize(38, 38)
         logo_box.setStyleSheet("""
             QFrame {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f46e5, stop:1 #06b6d4);
-                border-radius: 9px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
             }
         """)
         lb_layout = QVBoxLayout(logo_box)
@@ -50,32 +50,29 @@ class Sidebar(QWidget):
         lb_layout.setAlignment(Qt.AlignCenter)
         logo_icon = QLabel("⚡")
         logo_icon.setAlignment(Qt.AlignCenter)
-        logo_icon.setStyleSheet("font-size: 18px; color: #ffffff;")
+        logo_icon.setStyleSheet("font-size: 19px; color: #ffffff;")
         lb_layout.addWidget(logo_icon)
-        title_layout.addWidget(logo_box)
+        brand_layout.addWidget(logo_box)
 
         text_vbox = QVBoxLayout()
-        text_vbox.setSpacing(0)
+        text_vbox.setSpacing(1)
         brand_title = QLabel("ARKITECH")
-        brand_title.setObjectName("LogoTitle")
-        brand_title.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 800; letter-spacing: 0.8px;")
+        brand_title.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 900; letter-spacing: 0.8px;")
         
-        brand_sub = QLabel("ACADEMY PORTAL")
-        brand_sub.setObjectName("LogoSubtitle")
-        brand_sub.setStyleSheet("color: #818cf8; font-size: 9px; font-weight: 700; letter-spacing: 1.2px;")
+        brand_sub = QLabel("STUDENT PORTAL")
+        brand_sub.setStyleSheet("color: #818cf8; font-size: 9px; font-weight: 800; letter-spacing: 1.2px;")
         
         text_vbox.addWidget(brand_title)
         text_vbox.addWidget(brand_sub)
-        title_layout.addLayout(text_vbox)
-        title_layout.addStretch()
+        brand_layout.addLayout(text_vbox)
+        brand_layout.addStretch()
 
-        brand_layout.addLayout(title_layout)
-        layout.addLayout(brand_layout)
-        layout.addSpacing(20)
+        layout.addWidget(brand_frame)
+        layout.addSpacing(16)
 
-        # 2. Navigation Section
-        nav_label = QLabel("NAVIGARE")
-        nav_label.setStyleSheet("color: #475569; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; padding-left: 8px;")
+        # 2. Section: Navigare Principală
+        nav_label = QLabel("PLATFORMĂ ACADEMICĂ")
+        nav_label.setStyleSheet("color: #475569; font-size: 10px; font-weight: 800; letter-spacing: 1px; padding-left: 8px;")
         layout.addWidget(nav_label)
 
         self.btn_group = QButtonGroup(self)
@@ -84,7 +81,7 @@ class Sidebar(QWidget):
         self.nav_buttons = []
         nav_items = [
             ("📊  Tablou de bord", 0),
-            ("📚  Cursuri", 1),
+            ("📚  Catalog Cursuri", 1),
             ("📝  Teme & Proiecte", 2),
             ("🎯  Progres & Note", 3),
             ("⚙️  Setări & Profil", 4),
@@ -101,20 +98,20 @@ class Sidebar(QWidget):
                     color: #94a3b8;
                     border: none;
                     border-radius: 9px;
-                    padding: 12px 14px;
+                    padding: 11px 14px;
                     text-align: left;
                     font-size: 13px;
                     font-weight: 600;
                 }
                 QPushButton:hover {
-                    background-color: rgba(255, 255, 255, 0.05);
-                    color: #ffffff;
+                    background-color: rgba(255, 255, 255, 0.04);
+                    color: #f1f5f9;
                 }
                 QPushButton:checked {
-                    background-color: #1e1b4b;
+                    background-color: rgba(99, 102, 241, 0.15);
                     color: #a5b4fc;
-                    font-weight: 700;
-                    border-left: 4px solid #6366f1;
+                    font-weight: 800;
+                    border-left: 3px solid #6366f1;
                 }
             """)
             self.nav_buttons.append(btn)
@@ -123,7 +120,7 @@ class Sidebar(QWidget):
 
         self.btn_group.idClicked.connect(self._on_nav_clicked)
 
-        # By default hide instructor tab until role check
+        # Hide instructor tab by default
         self.nav_buttons[5].hide()
 
         if self.nav_buttons:
@@ -131,63 +128,67 @@ class Sidebar(QWidget):
 
         layout.addStretch()
 
-        # 3. Separator
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: rgba(255, 255, 255, 0.07); background-color: rgba(255, 255, 255, 0.07); max-height: 1px;")
-        layout.addWidget(sep)
-
-        # 4. User profile footer pill
+        # 3. User Profile Footer Card
         self.user_card = QFrame()
         self.user_card.setStyleSheet("""
             QFrame {
-                background-color: #111827;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 10px;
-                padding: 8px 10px;
+                background-color: #0e1424;
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 12px;
+                padding: 10px 12px;
             }
             QFrame:hover {
                 border-color: rgba(99, 102, 241, 0.4);
             }
         """)
         user_layout = QHBoxLayout(self.user_card)
-        user_layout.setContentsMargins(4, 4, 4, 4)
+        user_layout.setContentsMargins(0, 0, 0, 0)
         user_layout.setSpacing(10)
 
         self.avatar_lbl = QLabel("AM")
         self.avatar_lbl.setAlignment(Qt.AlignCenter)
-        self.avatar_lbl.setFixedSize(32, 32)
+        self.avatar_lbl.setFixedSize(36, 36)
         self.avatar_lbl.setStyleSheet("""
-            background: #312e81;
-            color: #c7d2fe;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f46e5, stop:1 #7c3aed);
+            color: #ffffff;
             font-weight: 800;
             font-size: 12px;
-            border-radius: 16px;
-            border: 1px solid #4338ca;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         """)
         user_layout.addWidget(self.avatar_lbl)
 
         user_info_layout = QVBoxLayout()
-        user_info_layout.setSpacing(1)
+        user_info_layout.setSpacing(2)
         self.user_name_lbl = QLabel("Student")
         self.user_name_lbl.setStyleSheet("color: #ffffff; font-weight: 700; font-size: 12px;")
-        self.user_code_lbl = QLabel("ARK-2026-001")
+        
+        status_row = QHBoxLayout()
+        status_row.setSpacing(4)
+        online_dot = QLabel("●")
+        online_dot.setStyleSheet("color: #10b981; font-size: 9px;")
+        status_row.addWidget(online_dot)
+        
+        self.user_code_lbl = QLabel("Conectat")
         self.user_code_lbl.setStyleSheet("color: #64748b; font-size: 10px; font-weight: 600;")
+        status_row.addWidget(self.user_code_lbl)
+        status_row.addStretch()
+        
         user_info_layout.addWidget(self.user_name_lbl)
-        user_info_layout.addWidget(self.user_code_lbl)
+        user_info_layout.addLayout(status_row)
         user_layout.addLayout(user_info_layout)
         user_layout.addStretch()
 
         layout.addWidget(self.user_card)
 
-        # Logout button
-        logout_btn = QPushButton("🚪 Deconectare")
+        # Logout Button
+        logout_btn = QPushButton("🚪  Deconectare")
         logout_btn.setCursor(QCursor(Qt.PointingHandCursor))
         logout_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
                 color: #f87171;
-                border: 1px solid rgba(239, 68, 68, 0.25);
+                border: 1px solid rgba(239, 68, 68, 0.2);
                 border-radius: 8px;
                 padding: 8px 12px;
                 font-size: 12px;
@@ -223,7 +224,7 @@ class Sidebar(QWidget):
             data = api.get("/notifications/unread-count")
             count = data.get("unread", 0)
             if count > 0:
-                self.nav_buttons[2].setText(f"📝  Teme & Proiecte ({count})")
+                self.nav_buttons[2].setText(f"📝  Teme & Proiecte  ({count})")
             else:
                 self.nav_buttons[2].setText("📝  Teme & Proiecte")
         except Exception:

@@ -339,6 +339,26 @@ def validate_code(
                     {
                         "g": existing_grade.id if 'existing_grade' in locals() and existing_grade else 0,
                         "c": code,
+@router.get("/history/{student_id}/{assignment_id}", summary="Get student attempt history")
+def get_attempt_history(
+    student_id: int,
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_user: Student = Depends(get_current_instructor)
+):
+    from sqlalchemy import text
+    # Join attempt_history cu grades pentru a filtra după student_id și assignment_id
+    query = text("""
+        SELECT ah.code, ah.timestamp, ah.feedback 
+        FROM attempt_history ah
+        JOIN grades g ON ah.grade_id = g.id 
+        WHERE g.student_id = :sid AND g.assignment_id = :aid 
+        ORDER BY ah.timestamp DESC
+    """)
+    results = db.execute(query, {"sid": student_id, "aid": assignment_id}).fetchall()
+    
+    return [{"code": r[0], "timestamp": str(r[1]), "feedback": r[2]} for r in results]
+
                         "t": datetime.datetime.utcnow(),
                         "f": eval_res.get("error") if not all_passed else "Success"
                     }

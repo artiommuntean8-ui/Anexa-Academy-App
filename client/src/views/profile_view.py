@@ -1,16 +1,18 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QLineEdit, QPushButton, QMessageBox, QProgressBar
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QFrame, QScrollArea, QLineEdit, QPushButton, QMessageBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 from client.src.components.badge import StatusBadge
+from client.src.components.xp_bar import XPBar
+from client.src.components.achievement_card import AchievementCard
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 from client.src.config import APP_NAME, APP_VERSION, API_BASE_URL
 
 
 class ProfileView(QWidget):
-    """Student profile, account security, and dashboard system settings."""
+    """Student profile, gamification showcase, account security, and settings."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -98,7 +100,34 @@ class ProfileView(QWidget):
         c_layout.addLayout(self.details_layout)
         self.layout.addWidget(self.card)
 
-        # 2. Security & Password Card
+        # 2. Gamification XP Bar
+        self.xp_bar = XPBar()
+        self.layout.addWidget(self.xp_bar)
+
+        # 3. Achievements Gallery Section
+        ach_card = QFrame()
+        ach_card.setStyleSheet("""
+            QFrame {
+                background-color: #111827;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 16px;
+                padding: 24px;
+            }
+        """)
+        ac_layout = QVBoxLayout(ach_card)
+        ac_layout.setSpacing(16)
+
+        ac_head = QLabel("Galerie Insigne & Realizări")
+        ac_head.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 800;")
+        ac_layout.addWidget(ac_head)
+
+        self.achievements_grid = QGridLayout()
+        self.achievements_grid.setSpacing(12)
+        ac_layout.addLayout(self.achievements_grid)
+
+        self.layout.addWidget(ach_card)
+
+        # 4. Security & Password Card
         sec_frame = QFrame()
         sec_frame.setStyleSheet("""
             QFrame {
@@ -158,7 +187,7 @@ class ProfileView(QWidget):
         sec_layout.addLayout(form_layout)
         self.layout.addWidget(sec_frame)
 
-        # 3. System Information Card
+        # 5. System Information Card
         sys_frame = QFrame()
         sys_frame.setStyleSheet("""
             QFrame {
@@ -218,6 +247,34 @@ class ProfileView(QWidget):
         self.field_email.itemAt(1).widget().setText(user.get("email", "-"))
         self.field_dept.itemAt(1).widget().setText(user.get("department", "Inginerie Software"))
         self.field_sem.itemAt(1).widget().setText(f"Semestrul {user.get('semester', 1)}")
+
+        # Fetch Achievements and XP stats
+        try:
+            ach_data = api.get("/achievements/my")
+            stats = ach_data.get("stats", {})
+            self.xp_bar.set_stats(
+                level=stats.get("level", 1),
+                title=stats.get("title", "Începător Python"),
+                xp_in_level=stats.get("xp_in_level", 0),
+                next_level_xp=stats.get("next_level_xp", 200),
+                total_xp=stats.get("total_xp", 0)
+            )
+            self._render_achievements(ach_data.get("achievements", []))
+        except Exception as e:
+            print(f"Error loading profile achievements: {e}")
+
+    def _render_achievements(self, achievements: list):
+        # Clear existing grid
+        while self.achievements_grid.count():
+            item = self.achievements_grid.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for idx, ach in enumerate(achievements):
+            row = idx // 2
+            col = idx % 2
+            card = AchievementCard(ach)
+            self.achievements_grid.addWidget(card, row, col)
 
     def _handle_password_change(self):
         new_pwd = self.new_pwd_input.text().strip()

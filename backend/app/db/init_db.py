@@ -1,4 +1,7 @@
+import json
 import datetime
+import sqlite3
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db.session import engine, Base
 from app.core.security import get_password_hash
@@ -8,19 +11,84 @@ from app.models.course import Course
 from app.models.enrollment import Enrollment
 from app.models.assignment import Assignment
 from app.models.grade import Grade
+from app.models.achievement import Achievement, StudentAchievement
 
+
+INITIAL_ACHIEVEMENTS = [
+    {
+        "code": "FIRST_CODE",
+        "title": "Primul Pas în Python",
+        "description": "Rulează și validează primul tău cod cu succes în consolă.",
+        "icon": "🚀",
+        "xp_reward": 50,
+        "category": "general"
+    },
+    {
+        "code": "PERFECT_SCORE",
+        "title": "Perfecțiune Academică",
+        "description": "Obține un punctaj impecabil de 100 puncte la un exercițiu.",
+        "icon": "⭐",
+        "xp_reward": 100,
+        "category": "mastery"
+    },
+    {
+        "code": "LOOP_MASTER",
+        "title": "Maestru al Buclelor",
+        "description": "Rezolvă un exercițiu ce conține instrucțiuni for sau while.",
+        "icon": "⚡",
+        "xp_reward": 150,
+        "category": "python"
+    },
+    {
+        "code": "FUNCTION_PRO",
+        "title": "Arhitect de Funcții",
+        "description": "Scrie și validează o funcție modulară cu parametri și return.",
+        "icon": "🧠",
+        "xp_reward": 150,
+        "category": "python"
+    },
+    {
+        "code": "TRIPLE_CROWN",
+        "title": "Tridentul Cunoașterii",
+        "description": "Finalizează cu succes cel puțin 3 teme notate.",
+        "icon": "🏆",
+        "xp_reward": 200,
+        "category": "mastery"
+    },
+    {
+        "code": "DATA_WIZARD",
+        "title": "Vrăjitorul Structurilor",
+        "description": "Manipulează cu succes colecții de date (liste sau dicționare).",
+        "icon": "🔮",
+        "xp_reward": 150,
+        "category": "python"
+    },
+]
 
 PYTHON_MODULES = [
     {
         "code": "PY-01",
         "title": "Primii pași în Python",
-        "description": "Înveți ce este Python, cum rulezi cod și cum afișezi mesaje.",
+        "description": "Înveți ce este Python, cum rulezi cod și cum afișezi mesaje în consolă.",
         "instructor_name": "Prof. Ana Ionescu",
         "lessons": [
-            "Ce este Python?",
-            "Comanda print()",
-            "Variabile simple",
-            "Numere și text",
+            {
+                "title": "Comanda print() și afișarea",
+                "description": "Scrie o instrucțiune print care afișează 'Salut, ArkiTech!' în consolă.",
+                "starter_code": "print('Salut, ArkiTech!')\n",
+                "test_cases": json.dumps([
+                    {"type": "stdout_contains", "expected": "Salut", "description": "Verifică dacă mesajul conține 'Salut'"},
+                    {"type": "stdout_contains", "expected": "ArkiTech", "description": "Verifică dacă mesajul conține 'ArkiTech'"}
+                ])
+            },
+            {
+                "title": "Variabile și tipuri de date",
+                "description": "Definește două variabile x=10 și y=20 și afișează suma lor.",
+                "starter_code": "x = 10\ny = 20\nprint(x + y)\n",
+                "test_cases": json.dumps([
+                    {"type": "stdout_contains", "expected": "30", "description": "Verifică dacă suma afișată este 30"}
+                ])
+            }
         ],
     },
     {
@@ -29,45 +97,53 @@ PYTHON_MODULES = [
         "description": "Înveți să faci programul să aleagă ramura potrivită cu if și else.",
         "instructor_name": "Prof. Ana Ionescu",
         "lessons": [
-            "Operatori de comparare",
-            "Instrucțiunea if",
-            "Structura if / else",
+            {
+                "title": "Verificare Par / Impar",
+                "description": "Creează o funcție este_par(numar) care returnează True dacă numărul este par și False dacă este impar.",
+                "starter_code": "def este_par(numar):\n    return numar % 2 == 0\n",
+                "test_cases": json.dumps([
+                    {"type": "call", "call": "este_par(4)", "expected": True, "description": "Test 4 este par"},
+                    {"type": "call", "call": "este_par(7)", "expected": False, "description": "Test 7 este impar"},
+                    {"type": "call", "call": "este_par(0)", "expected": True, "description": "Test 0 este par"}
+                ])
+            }
         ],
     },
     {
         "code": "PY-03",
         "title": "Repetări (bucle for & while)",
-        "description": "Înveți cum repetă un program anumite acțiuni automat.",
+        "description": "Înveți cum repetă un program anumite acțiuni automat cu bucle.",
         "instructor_name": "Prof. Ana Ionescu",
         "lessons": [
-            "Bucla for",
-            "Funcția range()",
-            "Bucla while",
-            "Exercițiu: Ghicește numărul",
+            {
+                "title": "Suma primelor N numere",
+                "description": "Creează o funcție suma_pana_la(n) care calculează suma 1 + 2 + ... + n folosind o buclă.",
+                "starter_code": "def suma_pana_la(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total\n",
+                "test_cases": json.dumps([
+                    {"type": "call", "call": "suma_pana_la(5)", "expected": 15, "description": "Suma până la 5 (1+2+3+4+5=15)"},
+                    {"type": "call", "call": "suma_pana_la(10)", "expected": 55, "description": "Suma până la 10 (55)"}
+                ])
+            }
         ],
     },
     {
         "code": "PY-04",
         "title": "Funcții & Modularitate",
-        "description": "Înveți să îți organizezi codul în funcții reutilizabile.",
+        "description": "Înveți să îți organizezi codul în funcții reutilizabile și flexibile.",
         "instructor_name": "Prof. Ana Ionescu",
         "lessons": [
-            "Ce este o funcție?",
-            "Parametri și return",
-            "Mini-proiect: Calculator",
+            {
+                "title": "Mini-Calculator de operații",
+                "description": "Creează funcția calculator(a, b, op) care suportă '+', '-', '*'.",
+                "starter_code": "def calculator(a, b, op):\n    if op == '+': return a + b\n    elif op == '-': return a - b\n    elif op == '*': return a * b\n    return 0\n",
+                "test_cases": json.dumps([
+                    {"type": "call", "call": "calculator(10, 5, '+')", "expected": 15, "description": "10 + 5 = 15"},
+                    {"type": "call", "call": "calculator(20, 8, '-')", "expected": 12, "description": "20 - 8 = 12"},
+                    {"type": "call", "call": "calculator(6, 7, '*')", "expected": 42, "description": "6 * 7 = 42"}
+                ])
+            }
         ],
-    },
-    {
-        "code": "PY-05",
-        "title": "Structuri de Date (Liste & Dicționare)",
-        "description": "Înveți să stochezi colecții de valori într-o singură variabilă.",
-        "instructor_name": "Prof. Ana Ionescu",
-        "lessons": [
-            "Liste și indexare",
-            "Parcurgerea listelor",
-            "Dicționare simple",
-        ],
-    },
+    }
 ]
 
 DEMO_USERS = [
@@ -121,6 +197,19 @@ DEMO_USERS = [
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-migration: check if starter_code or test_cases are missing in assignments
+    with engine.connect() as conn:
+        try:
+            res = conn.execute(text("PRAGMA table_info(assignments);")).fetchall()
+            col_names = [r[1] for r in res]
+            if "starter_code" not in col_names:
+                conn.execute(text("ALTER TABLE assignments ADD COLUMN starter_code TEXT;"))
+            if "test_cases" not in col_names:
+                conn.execute(text("ALTER TABLE assignments ADD COLUMN test_cases TEXT;"))
+            conn.commit()
+        except Exception as e:
+            print(f"Migration check: {e}")
 
 
 def _ensure_user(db: Session, user_data: dict) -> Student:
@@ -151,6 +240,26 @@ def _ensure_user(db: Session, user_data: dict) -> Student:
     return student
 
 
+def _ensure_achievements(db: Session) -> None:
+    for ach_data in INITIAL_ACHIEVEMENTS:
+        existing = db.query(Achievement).filter(Achievement.code == ach_data["code"]).first()
+        if not existing:
+            db.add(Achievement(
+                code=ach_data["code"],
+                title=ach_data["title"],
+                description=ach_data["description"],
+                icon=ach_data["icon"],
+                xp_reward=ach_data["xp_reward"],
+                category=ach_data["category"],
+            ))
+        else:
+            existing.title = ach_data["title"]
+            existing.description = ach_data["description"]
+            existing.icon = ach_data["icon"]
+            existing.xp_reward = ach_data["xp_reward"]
+    db.commit()
+
+
 def _ensure_module(db: Session, module_data: dict) -> Course:
     module = db.query(Course).filter(Course.code == module_data["code"]).first()
     if not module:
@@ -172,19 +281,25 @@ def _ensure_module(db: Session, module_data: dict) -> Course:
         module.credits = len(module_data["lessons"]) * 2
         db.commit()
 
-    for lesson_title in module_data["lessons"]:
+    for lesson_item in module_data["lessons"]:
         existing = db.query(Assignment).filter(
             Assignment.course_id == module.id,
-            Assignment.title == lesson_title,
+            Assignment.title == lesson_item["title"],
         ).first()
         if not existing:
             db.add(Assignment(
                 course_id=module.id,
-                title=lesson_title,
-                description=f"Lecție și exercițiu practic din modulul {module.title}",
+                title=lesson_item["title"],
+                description=lesson_item["description"],
+                starter_code=lesson_item.get("starter_code", ""),
+                test_cases=lesson_item.get("test_cases", "[]"),
                 max_score=100.0,
                 due_date=datetime.datetime.utcnow() + datetime.timedelta(days=7),
             ))
+        else:
+            existing.description = lesson_item["description"]
+            existing.starter_code = lesson_item.get("starter_code", "")
+            existing.test_cases = lesson_item.get("test_cases", "[]")
     db.commit()
     return module
 
@@ -205,40 +320,10 @@ def _enroll_student_in_all_modules(db: Session, student: Student) -> None:
     db.commit()
 
 
-def _seed_demo_progress(db: Session) -> None:
-    artiom = db.query(Student).filter(Student.email == "artiom.muntean@arkitech.academy").first()
-    andrei = db.query(Student).filter(Student.email == "andrei@pythonkids.ro").first()
-    maria = db.query(Student).filter(Student.email == "maria@pythonkids.ro").first()
-
-    students_to_grade = [s for s in [artiom, andrei, maria] if s is not None]
-    if not students_to_grade:
-        return
-
-    py01 = db.query(Course).filter(Course.code == "PY-01").first()
-    py02 = db.query(Course).filter(Course.code == "PY-02").first()
-    if not py01:
-        return
-
-    lessons = db.query(Assignment).filter(Assignment.course_id.in_([py01.id, py02.id] if py02 else [py01.id])).all()
-    
-    for st in students_to_grade:
-        for i, lesson in enumerate(lessons[:3]):
-            existing = db.query(Grade).filter(
-                Grade.student_id == st.id,
-                Grade.assignment_id == lesson.id,
-            ).first()
-            if not existing:
-                db.add(Grade(
-                    assignment_id=lesson.id,
-                    student_id=st.id,
-                    score=98.5 if st == artiom else 100.0,
-                    feedback="Implementare excelentă a cerințelor și cod curat!",
-                ))
-    db.commit()
-
-
 def seed_demo_data(db: Session) -> None:
-    """Seed ArkiTech curriculum, users, enrollments and sample progress."""
+    """Seed initial achievements, curriculum, users, enrollments and sample progress."""
+    _ensure_achievements(db)
+
     for user_data in DEMO_USERS:
         _ensure_user(db, user_data)
 
@@ -249,8 +334,6 @@ def seed_demo_data(db: Session) -> None:
     for student in students:
         _enroll_student_in_all_modules(db, student)
 
-    _seed_demo_progress(db)
-
 
 if __name__ == "__main__":
     from app.db.session import SessionLocal
@@ -258,7 +341,7 @@ if __name__ == "__main__":
     init_db()
     db = SessionLocal()
     try:
-        print("Seeding demo data...")
+        print("Seeding demo data & achievements...")
         seed_demo_data(db)
         print("Done!")
     finally:

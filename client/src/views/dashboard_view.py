@@ -7,12 +7,14 @@ from client.src.components.progress_card import ProgressCard
 from client.src.components.stat_card import StatCard
 from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
+from client.src.components.xp_bar import XPBar
+from client.src.components.achievement_card import AchievementCard
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 
 
 class DashboardView(QWidget):
-    """Student progress dashboard — overall percentage, metrics, and per-module progress."""
+    """Student progress dashboard — overall percentage, XP gamification, and modules progress."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -78,11 +80,15 @@ class DashboardView(QWidget):
         wb_layout.addWidget(hero)
         self.layout.addWidget(self.welcome_banner)
 
-        # 3. KPI Stat Cards Row
+        # 3. Gamification XP Bar
+        self.xp_bar = XPBar()
+        self.layout.addWidget(self.xp_bar)
+
+        # 4. KPI Stat Cards Row
         stats_layout = QHBoxLayout()
         stats_layout.setSpacing(16)
         self.card_courses = StatCard("Cursuri Active", "0", "📚", "#6366f1", "rgba(99, 102, 241, 0.12)", "Semestrul curent")
-        self.card_assignments = StatCard("Teme Finalizate", "0", "📝", "#10b981", "rgba(16, 185, 129, 0.12)", "Lecții notate")
+        self.card_assignments = StatCard("Teme Finalizate", "0", "📝", "#10b981", "rgba(16, 185, 129, 0.12)", "Lecții validate")
         self.card_gpa = StatCard("Medie Generală", "0.0", "⭐", "#06b6d4", "rgba(6, 182, 212, 0.12)", "Punctaj academic")
 
         stats_layout.addWidget(self.card_courses)
@@ -90,13 +96,22 @@ class DashboardView(QWidget):
         stats_layout.addWidget(self.card_gpa)
         self.layout.addLayout(stats_layout)
 
-        # 4. Academic Progress Card
+        # 5. Academic Progress Card
         self.progress_card = ProgressCard()
         self.layout.addWidget(self.progress_card)
 
-        # 5. Modules List Header & Container
+        # 6. Achievements Section
+        ach_head = QLabel("Realizări & Insigne Recente")
+        ach_head.setStyleSheet("color: #ffffff; font-size: 18px; font-weight: 800; letter-spacing: -0.2px;")
+        self.layout.addWidget(ach_head)
+
+        self.achievements_container = QHBoxLayout()
+        self.achievements_container.setSpacing(12)
+        self.layout.addLayout(self.achievements_container)
+
+        # 7. Modules List Header & Container
         modules_header = QLabel("Modulele și Cursurile Tale")
-        modules_header.setStyleSheet("color: #ffffff; font-size: 18px; font-weight: 800; letter-spacing: -0.2px;")
+        modules_header.setStyleSheet("color: #ffffff; font-size: 18px; font-weight: 800; letter-spacing: -0.2px; margin-top: 10px;")
         self.layout.addWidget(modules_header)
 
         self.modules_container = QVBoxLayout()
@@ -143,11 +158,36 @@ class DashboardView(QWidget):
             self.card_assignments.set_value(str(completed))
             self.progress_card.set_progress(current_credits=total_credits, total_target_credits=30, gpa=avg_grade)
 
+            # Update XP Bar & Achievements
+            try:
+                ach_data = api.get("/achievements/my")
+                stats = ach_data.get("stats", {})
+                self.xp_bar.set_stats(
+                    level=stats.get("level", 1),
+                    title=stats.get("title", "Începător Python"),
+                    xp_in_level=stats.get("xp_in_level", 0),
+                    next_level_xp=stats.get("next_level_xp", 200),
+                    total_xp=stats.get("total_xp", 0)
+                )
+                self._render_achievements(ach_data.get("achievements", []))
+            except Exception as e:
+                print(f"Error loading achievements: {e}")
+
             self._render_modules(modules_data if modules_data else enrolled)
 
         except Exception as e:
             self.error_msg_lbl.setText(f"Eroare: {str(e)}")
             self.error_banner.show()
+
+    def _render_achievements(self, achievements: list):
+        while self.achievements_container.count():
+            item = self.achievements_container.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for ach in achievements[:3]:
+            card = AchievementCard(ach)
+            self.achievements_container.addWidget(card)
 
     def _render_modules(self, modules: list):
         while self.modules_container.count():

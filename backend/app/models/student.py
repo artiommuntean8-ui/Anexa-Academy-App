@@ -23,3 +23,4 @@ class Student(Base):
     # Relationships
     enrollments = relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
     grades = relationship("Grade", back_populates="student", cascade="all, delete-orphan")
+    achievements = relationship("StudentAchievement", back_populates="student", cascade="all, delete-orphan")

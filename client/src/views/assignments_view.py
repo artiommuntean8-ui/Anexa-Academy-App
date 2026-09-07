@@ -8,6 +8,7 @@ from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
+from client.src.views.add_assignment_dialog import AddAssignmentDialog
 
 
 class AssignmentsView(QWidget):
@@ -46,31 +47,33 @@ class AssignmentsView(QWidget):
         hc_layout = QHBoxLayout(header_card)
         hc_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Buton pentru Profesor (dacă e cazul)
-        if auth.current_user and auth.current_user.get("role") == "instructor":
-            add_btn = QPushButton("＋ Adaugă Temă")
-            add_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #3b82f6;
-                    color: white;
-                    font-weight: 700;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                }
-                QPushButton:hover { background-color: #2563eb; }
-            """)
-            hc_layout.addWidget(add_btn)
-
         info_vbox = QVBoxLayout()
         info_vbox.setSpacing(2)
         h_title = QLabel("Teme de Laborator & Proiecte")
         h_title.setStyleSheet("color: #ffffff; font-size: 17px; font-weight: 800;")
-        h_sub = QLabel("Monitorizează starea temelor, cerințele și punctajul acordat.")
+        h_sub = QLabel("Fă click pe orice temă pentru a deschide editorul interactiv și a trimite soluția.")
         h_sub.setStyleSheet("color: #94a3b8; font-size: 12px;")
         info_vbox.addWidget(h_title)
         info_vbox.addWidget(h_sub)
         hc_layout.addLayout(info_vbox)
         hc_layout.addStretch()
+
+        self.add_btn = QPushButton("＋ Adaugă Temă")
+        self.add_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        self.add_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4f46e5;
+                color: white;
+                font-weight: 700;
+                padding: 8px 16px;
+                border-radius: 8px;
+                border: 1px solid #6366f1;
+            }
+            QPushButton:hover { background-color: #4338ca; }
+        """)
+        self.add_btn.clicked.connect(self._open_add_dialog)
+        self.add_btn.hide()
+        hc_layout.addWidget(self.add_btn)
 
         self.layout.addWidget(header_card)
 
@@ -88,6 +91,7 @@ class AssignmentsView(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.cellClicked.connect(self._on_cell_clicked)
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: #111827;
@@ -117,11 +121,22 @@ class AssignmentsView(QWidget):
         scroll.setWidget(container)
         outer_layout.addWidget(scroll)
 
+    def _open_add_dialog(self):
+        dlg = AddAssignmentDialog(parent=self)
+        if dlg.exec():
+            self.refresh_data()
+
     def refresh_data(self):
         """Load assignments and student grades."""
         user = auth.current_user
         if not user:
             return
+
+        # Show Add button for instructors
+        if user.get("role") in ["instructor", "admin"]:
+            self.add_btn.show()
+        else:
+            self.add_btn.hide()
 
         student_id = user.get("id")
         try:
@@ -134,36 +149,30 @@ class AssignmentsView(QWidget):
 
     def _render_table(self):
         self.table.setRowCount(len(self.all_assignments))
-        self.table.cellClicked.connect(self._on_cell_clicked)
 
         for row, a in enumerate(self.all_assignments):
             a_id = a.get("id")
             grade_info = self.student_grades.get(a_id)
 
-            # ... (restul codului de randare rămâne la fel)
             title_text = a.get("title", "")
             title_item = QTableWidgetItem(f"  📝  {title_text}")
             title_item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
             self.table.setItem(row, 0, title_item)
 
-            # 2. Course ID
             course_item = QTableWidgetItem(f" Curs #{a.get('course_id')} ")
             course_item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(row, 1, course_item)
 
-            # 3. Max Score
             score_item = QTableWidgetItem(f" {a.get('max_score', 100):.0f} pct ")
             score_item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(row, 2, score_item)
 
-            # 4. Due Date
             due = a.get("due_date", "")
             due_str = due[:10] if due else "Fără termen"
             due_item = QTableWidgetItem(f" 📅 {due_str} ")
             due_item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(row, 3, due_item)
 
-            # 5. Status Badge Cell Widget
             cell_widget = QWidget()
             cell_layout = QHBoxLayout(cell_widget)
             cell_layout.setContentsMargins(8, 6, 8, 6)
@@ -180,16 +189,17 @@ class AssignmentsView(QWidget):
             self.table.setRowHeight(row, 50)
 
     def _on_cell_clicked(self, row, column):
+        if row < 0 or row >= len(self.all_assignments):
+            return
         assignment = self.all_assignments[row]
-        
-        # Pregătim datele pentru ExerciseView
         exercise_data = {
             "id": assignment.get("id"),
             "title": assignment.get("title"),
-            "description": assignment.get("description", "Exercițiu de programare Python"),
-            "starter_code": assignment.get("starter_code", "# Scrie codul tău aici\n")
+            "description": assignment.get("description", "Exercițiu practic de programare Python"),
+            "starter_code": assignment.get("starter_code", "# Scrie codul tău aici\nprint('Salut, ArkiTech!')\n")
         }
-        
-        # Navigăm către ExerciseView folosind MainWindow
-        if hasattr(self.window(), "show_exercise"):
-            self.window().show_exercise(exercise_data)
+
+        # Navigate to ExerciseView
+        main_win = self.window()
+        if hasattr(main_win, "show_exercise"):
+            main_win.show_exercise(exercise_data)

@@ -1,8 +1,10 @@
+import csv
 from typing import List
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from client.src.components.badge import StatusBadge
 from client.src.components.stat_card import StatCard
 from client.src.components.empty_state import EmptyState
@@ -11,7 +13,7 @@ from client.src.services.auth_service import auth
 
 
 class GradesView(QWidget):
-    """Academic grades, performance overview, and instructor feedback ledger."""
+    """Academic grades, performance overview, instructor feedback ledger, and CSV export."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -36,36 +38,40 @@ class GradesView(QWidget):
 
         self.card_gpa = StatCard("Medie Ponderată", "0.0", "⭐", "#10b981", "rgba(16, 185, 129, 0.12)", "Toate evaluările")
         self.card_total_evals = StatCard("Evaluări Finalizate", "0", "📋", "#6366f1", "rgba(99, 102, 241, 0.12)", "Teme notate")
-        self.card_status = StatCard("Status Academic", "Excelent", "🏆", "#06b6d4", "rgba(6, 182, 212, 0.12)", "Semestrul 2")
-        export_btn = QPushButton("Exportă CSV")
-        export_btn.clicked.connect(self.export_grades)
-        layout.addWidget(export_btn)
-
-
-    def export_grades(self):
-        import csv
-        from PySide6.QtWidgets import QFileDialog
-        
-        path, _ = QFileDialog.getSaveFileName(self, "Exportă Note", "note.csv", "CSV Files (*.csv)")
-        if path:
-            with open(path, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(["Elev", "Notă", "Feedback"])
-                # Presupunem că datele sunt în tabel
-                for row in range(self.table.rowCount()):
-                    writer.writerow([self.table.item(row, i).text() for i in range(3)])
+        self.card_status = StatCard("Status Academic", "Excelent", "🏆", "#06b6d4", "rgba(6, 182, 212, 0.12)", "Semestrul curent")
 
         stats_layout.addWidget(self.card_gpa)
         stats_layout.addWidget(self.card_total_evals)
         stats_layout.addWidget(self.card_status)
         self.layout.addLayout(stats_layout)
 
-        # 2. Table Header
+        # 2. Table Header with Export Action
         h_box = QHBoxLayout()
         t_label = QLabel("Registrul Notelor & Feedback-ul Instructorilor")
         t_label.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;")
         h_box.addWidget(t_label)
         h_box.addStretch()
+
+        export_btn = QPushButton("📥 Exportă CSV")
+        export_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #cbd5e1;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 8px;
+                padding: 7px 14px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                color: #ffffff;
+            }
+        """)
+        export_btn.clicked.connect(self.export_grades)
+        h_box.addWidget(export_btn)
+
         self.layout.addLayout(h_box)
 
         # 3. Grades Ledger Table
@@ -107,6 +113,29 @@ class GradesView(QWidget):
         self.layout.addWidget(self.table)
         scroll.setWidget(container)
         outer_layout.addWidget(scroll)
+
+    def export_grades(self):
+        if self.table.rowCount() == 0:
+            QMessageBox.information(self, "Export", "Nu există note de exportat.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(self, "Exportă Note CSV", "note_arkitech.csv", "CSV Files (*.csv)")
+        if path:
+            try:
+                with open(path, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["ID Temă", "Notă Acordată", "Feedback & Observații", "Data Înregistrării"])
+                    for row in range(self.table.rowCount()):
+                        tema_id = self.table.item(row, 0).text().strip() if self.table.item(row, 0) else ""
+                        feedback = self.table.item(row, 2).text().strip() if self.table.item(row, 2) else ""
+                        data = self.table.item(row, 3).text().strip() if self.table.item(row, 3) else ""
+                        # Score from cell widget
+                        widget = self.table.cellWidget(row, 1)
+                        score_text = widget.findChild(QLabel).text().replace("★", "").replace("puncte", "").strip() if widget else ""
+                        writer.writerow([tema_id, score_text, feedback, data])
+                QMessageBox.information(self, "Succes", "Fișierul CSV a fost exportat cu succes!")
+            except Exception as e:
+                QMessageBox.critical(self, "Eroare", f"Nu s-a putut exporta fișierul: {str(e)}")
 
     def refresh_data(self):
         """Fetch student grades from backend."""

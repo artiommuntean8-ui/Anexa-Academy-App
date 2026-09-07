@@ -7,19 +7,13 @@ from client.src.services.auth_service import auth
 
 
 class LoginView(QWidget):
-    """Modern SaaS Dark Theme Login View."""
+    """Modern SaaS Dark Theme Login View with multi-role demo credentials."""
 
     login_successful = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("LoginView")
-        self.setStyleSheet("""
-            QWidget#LoginView {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #1e1b4b, stop:1 #0f172a);
-            }
-        """)
-
         self.setStyleSheet("background-color: #090d16;")
 
         main_layout = QVBoxLayout(self)
@@ -28,18 +22,18 @@ class LoginView(QWidget):
 
         # Login card container
         card = QFrame()
-        card.setFixedWidth(440)
+        card.setFixedWidth(460)
         card.setStyleSheet("""
             QFrame {
-                background-color: rgba(30, 41, 59, 0.7);
-                border: 1px solid rgba(255, 255, 255, 0.05);
-                border-radius: 24px;
-                padding: 40px;
+                background-color: #111827;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 18px;
+                padding: 36px 32px;
             }
         """)
 
         card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(18)
+        card_layout.setSpacing(16)
 
         # Branding Header
         header_layout = QVBoxLayout()
@@ -68,13 +62,13 @@ class LoginView(QWidget):
         title_lbl.setStyleSheet("color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin-top: 6px;")
         header_layout.addWidget(title_lbl)
 
-        sub_lbl = QLabel("Student Dashboard Portal")
+        sub_lbl = QLabel("Student & Teacher Portal")
         sub_lbl.setAlignment(Qt.AlignCenter)
         sub_lbl.setStyleSheet("color: #818cf8; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;")
         header_layout.addWidget(sub_lbl)
 
         card_layout.addLayout(header_layout)
-        card_layout.addSpacing(6)
+        card_layout.addSpacing(4)
 
         # Error notification banner
         self.error_lbl = QLabel("")
@@ -99,8 +93,8 @@ class LoginView(QWidget):
         email_layout.addWidget(email_lbl)
 
         self.email_input = QLineEdit()
-        self.email_input.setPlaceholderText("ex: elev@pythonkids.ro")
-        self.email_input.setText("andrei@pythonkids.ro")
+        self.email_input.setPlaceholderText("ex: artiom.muntean@arkitech.academy")
+        self.email_input.setText("artiom.muntean@arkitech.academy")
         self.email_input.setStyleSheet("""
             QLineEdit {
                 background-color: #162035;
@@ -127,7 +121,7 @@ class LoginView(QWidget):
         self.pwd_input = QLineEdit()
         self.pwd_input.setEchoMode(QLineEdit.Password)
         self.pwd_input.setPlaceholderText("••••••••••••")
-        self.pwd_input.setText("Elev2026!")
+        self.pwd_input.setText("ArkiTech2026!")
         self.pwd_input.setStyleSheet("""
             QLineEdit {
                 background-color: #162035;
@@ -170,38 +164,78 @@ class LoginView(QWidget):
         self.login_btn.clicked.connect(self._handle_login)
         card_layout.addWidget(self.login_btn)
 
-        # Quick demo fill helper button
-        demo_btn = QPushButton("⚡ Folosește Credențiale Demo")
-        demo_btn.setCursor(QCursor(Qt.PointingHandCursor))
-        demo_btn.setStyleSheet("""
+        # Quick demo fill helper chips
+        demo_header = QLabel("⚡ CONTURI DEMO RAPIDE:")
+        demo_header.setStyleSheet("color: #64748b; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; margin-top: 4px;")
+        card_layout.addWidget(demo_header)
+
+        demo_row = QHBoxLayout()
+        demo_row.setSpacing(6)
+
+        btn_student = QPushButton("👨‍🎓 Student ArkiTech")
+        btn_student.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_student.setStyleSheet("""
             QPushButton {
                 background-color: rgba(99, 102, 241, 0.12);
                 color: #a5b4fc;
-                border: 1px dashed rgba(99, 102, 241, 0.35);
-                border-radius: 9px;
-                padding: 8px;
-                font-size: 12px;
+                border: 1px solid rgba(99, 102, 241, 0.3);
+                border-radius: 7px;
+                padding: 6px 8px;
+                font-size: 11px;
                 font-weight: 600;
             }
-            QPushButton:hover {
-                background-color: rgba(99, 102, 241, 0.2);
-                color: #ffffff;
-            }
+            QPushButton:hover { background-color: rgba(99, 102, 241, 0.25); color: #ffffff; }
         """)
-        demo_btn.clicked.connect(self._fill_demo_credentials)
-        card_layout.addWidget(demo_btn)
+        btn_student.clicked.connect(lambda: self._set_credentials("artiom.muntean@arkitech.academy", "ArkiTech2026!"))
+        demo_row.addWidget(btn_student)
+
+        btn_prof = QPushButton("👨‍🏫 Profesor Ana")
+        btn_prof.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_prof.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(6, 182, 212, 0.12);
+                color: #67e8f9;
+                border: 1px solid rgba(6, 182, 212, 0.3);
+                border-radius: 7px;
+                padding: 6px 8px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            QPushButton:hover { background-color: rgba(6, 182, 212, 0.25); color: #ffffff; }
+        """)
+        btn_prof.clicked.connect(lambda: self._set_credentials("prof.an@pythonkids.ro", "Prof2026!"))
+        demo_row.addWidget(btn_prof)
+
+        btn_elev = QPushButton("👦 Elev Andrei")
+        btn_elev.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_elev.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(16, 185, 129, 0.12);
+                color: #6ee7b7;
+                border: 1px solid rgba(16, 185, 129, 0.3);
+                border-radius: 7px;
+                padding: 6px 8px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            QPushButton:hover { background-color: rgba(16, 185, 129, 0.25); color: #ffffff; }
+        """)
+        btn_elev.clicked.connect(lambda: self._set_credentials("andrei@pythonkids.ro", "Elev2026!"))
+        demo_row.addWidget(btn_elev)
+
+        card_layout.addLayout(demo_row)
 
         # Footer
         footer_lbl = QLabel("ArkiTech Academic Security Protocol • JWT v1")
         footer_lbl.setAlignment(Qt.AlignCenter)
-        footer_lbl.setStyleSheet("color: #475569; font-size: 11px; margin-top: 6px;")
+        footer_lbl.setStyleSheet("color: #475569; font-size: 11px; margin-top: 4px;")
         card_layout.addWidget(footer_lbl)
 
         main_layout.addWidget(card)
 
-    def _fill_demo_credentials(self):
-        self.email_input.setText("andrei@pythonkids.ro")
-        self.pwd_input.setText("Elev2026!")
+    def _set_credentials(self, email: str, pwd: str):
+        self.email_input.setText(email)
+        self.pwd_input.setText(pwd)
         self.error_lbl.hide()
 
     def _handle_login(self):
@@ -221,22 +255,12 @@ class LoginView(QWidget):
             self.login_successful.emit()
         except RuntimeError as e:
             self._show_error(str(e))
+        except Exception as e:
+            self._show_error(f"Eroare neprevăzută: {str(e)}")
+        finally:
+            self.login_btn.setEnabled(True)
+            self.login_btn.setText("Autentificare în Cont")
+
     def _show_error(self, message: str):
         self.error_lbl.setText(message)
         self.error_lbl.show()
-
-class LogoutButton(QPushButton):
-    def __init__(self, parent=None):
-        super().__init__("Deconectare", parent)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #fca5a5;
-                border: 1px solid #fca5a5;
-                border-radius: 8px;
-                padding: 6px 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #7f1d1d; }
-        """)
-

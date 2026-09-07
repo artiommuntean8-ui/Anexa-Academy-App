@@ -8,7 +8,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget
+    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget, QPushButton
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -25,7 +25,6 @@ from client.src.views.grades_view import GradesView
 from client.src.views.profile_view import ProfileView
 from client.src.views.exercise_view import ExerciseView
 from client.src.views.student_management_view import StudentManagementView
-
 from client.src.services.auth_service import auth
 
 
@@ -37,9 +36,9 @@ class MainWindow(QMainWindow):
         ("Catalog Cursuri", "Toate cursurile disponibile și înscrieri active", "Cursuri"),
         ("Teme & Proiecte", "Monitorizarea temelor de laborator și a termenelor de predare", "Teme"),
         ("Progres & Note", "Situația notelor obținute și feedback-ul detaliat", "Progres"),
-        ("Gestionare Elevi", "Adaugă și monitorizează elevii din clasă", "Elevi"),
-
         ("Setări & Profil", "Datele contului universitar, securitate și preferințe", "Setări"),
+        ("Gestionare Elevi", "Panou profesori: monitorizare și grupe elevi", "Elevi"),
+        ("Exercițiu Interactiv", "Consolă de programare și validare automată a codului", "Exercițiu"),
     ]
 
     def __init__(self):
@@ -79,15 +78,6 @@ class MainWindow(QMainWindow):
 
         # Header
         self.header = Header()
-        # Logout Button in Header
-        self.header.logout_btn = QPushButton("Ieșire")
-        self.header.logout_btn.setStyleSheet("""
-            QPushButton { background: transparent; color: #94a3b8; font-weight: 600; }
-            QPushButton:hover { color: #fca5a5; }
-        """)
-        self.header.logout_btn.clicked.connect(self.logout)
-        content_layout.addWidget(self.header.logout_btn)
-
         self.header.refresh_requested.connect(self._refresh_current_view)
         content_layout.addWidget(self.header)
 
@@ -96,11 +86,9 @@ class MainWindow(QMainWindow):
         self.dashboard_view = DashboardView()
         self.courses_view = CoursesView()
         self.assignments_view = AssignmentsView()
-        self.students_view = StudentManagementView()
-        self.views_stack.addWidget(self.students_view)     # Index 6
-
         self.grades_view = GradesView()
         self.profile_view = ProfileView()
+        self.students_view = StudentManagementView()
         self.exercise_view = ExerciseView()
 
         self.views_stack.addWidget(self.dashboard_view)    # Index 0
@@ -108,33 +96,24 @@ class MainWindow(QMainWindow):
         self.views_stack.addWidget(self.assignments_view)  # Index 2
         self.views_stack.addWidget(self.grades_view)       # Index 3
         self.views_stack.addWidget(self.profile_view)      # Index 4
-        self.views_stack.addWidget(self.exercise_view)     # Index 5
+        self.views_stack.addWidget(self.students_view)     # Index 5
+        self.views_stack.addWidget(self.exercise_view)     # Index 6
 
         content_layout.addWidget(self.views_stack)
         app_layout.addWidget(content_area)
 
-    def update_sidebar_visibility(self):
-        """Show/hide tabs based on user role."""
-        is_instructor = auth.current_user and auth.current_user.get("role") == "instructor"
-        
-        # Hide "Gestionare Elevi" (index 6) if not instructor
-        self.sidebar.set_page_visible(6, is_instructor)
-
         self.root_stack.addWidget(self.app_container)
+
         # Check for saved session
         if auth.load_session():
             self._on_login_success()
         else:
-            # Initial screen: Login
             self.root_stack.setCurrentIndex(0)
-        
-        # Refresh notifications
-        self.sidebar.update_notifications()
 
     def _on_login_success(self):
         """Transition into authenticated dashboard upon successful login."""
         self.sidebar.update_user_info()
-        self.sidebar.update_sidebar_visibility()  # <--- Adăugat aici apelul
+        self.sidebar.update_notifications()
         self.root_stack.setCurrentIndex(1)
         self.sidebar.set_active_index(0)
         self._on_page_changed(0)
@@ -143,10 +122,6 @@ class MainWindow(QMainWindow):
         """Clear state and return to login view."""
         auth.logout()
         self.root_stack.setCurrentIndex(0)
-    def logout(self):
-        auth.logout()
-        self.root_stack.setCurrentIndex(0)
-
 
     def _on_page_changed(self, page_index: int):
         self.views_stack.setCurrentIndex(page_index)
@@ -154,20 +129,21 @@ class MainWindow(QMainWindow):
         if 0 <= page_index < len(self.NAV_METADATA):
             title, subtitle, breadcrumb = self.NAV_METADATA[page_index]
             self.header.set_title(title, subtitle, breadcrumb)
-    def show_exercise(self, exercise_data):
-        """Transition to the exercise view with specific content."""
-        self.exercise_view.exercise = exercise_data
-        # Update UI components in exercise_view
-        self.views_stack.setCurrentIndex(5)
-        self.header.set_title("Exercițiu", exercise_data.get("title", ""), "Exerciții")
-
 
         self._refresh_current_view()
+
+    def show_exercise(self, exercise_data: dict):
+        """Transition to interactive exercise console."""
+        self.exercise_view.exercise = exercise_data
+        self.exercise_view.editor.setPlainText(exercise_data.get("starter_code", "# Scrie codul tău aici\n"))
+        self.views_stack.setCurrentIndex(6)
+        self.header.set_title("Exercițiu Interactiv", exercise_data.get("title", ""), "Teme / Exercițiu")
 
     def _refresh_current_view(self):
         current_widget = self.views_stack.currentWidget()
         if hasattr(current_widget, "refresh_data"):
             current_widget.refresh_data()
+        self.sidebar.update_notifications()
 
 
 def main():

@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QLineEdit, QPushButton, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QLineEdit, QPushButton, QMessageBox, QProgressBar
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
@@ -22,18 +22,6 @@ class ProfileView(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: none; background-color: #090d16; }")
-        # Evoluție Vizuală
-        stats_frame = QFrame()
-        stats_frame.setStyleSheet("background-color: #111827; border-radius: 12px; padding: 20px;")
-        stats_layout = QVBoxLayout(stats_frame)
-        stats_layout.addWidget(QLabel("Evoluție Performanță (Notă Medie)"))
-        # Placeholder pentru un grafic simplu (sau progres bar)
-        from PySide6.QtWidgets import QProgressBar
-        bar = QProgressBar()
-        bar.setValue(85) # Valoare simulată
-        stats_layout.addWidget(bar)
-        layout.addWidget(stats_frame)
-
 
         container = QWidget()
         container.setStyleSheet("background-color: #090d16;")

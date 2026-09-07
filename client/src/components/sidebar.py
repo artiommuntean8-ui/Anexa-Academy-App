@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
 from client.src.services.auth_service import auth
+from client.src.services.api_client import api
 
 
 class Sidebar(QWidget):
@@ -81,13 +82,13 @@ class Sidebar(QWidget):
         self.btn_group.setExclusive(True)
 
         self.nav_buttons = []
-        # As requested: [Tablou de bord / Cursuri / Teme / Progres / Setări]
         nav_items = [
             ("📊  Tablou de bord", 0),
             ("📚  Cursuri", 1),
             ("📝  Teme & Proiecte", 2),
             ("🎯  Progres & Note", 3),
             ("⚙️  Setări & Profil", 4),
+            ("👥  Gestionare Elevi", 5),
         ]
 
         for text, index in nav_items:
@@ -118,10 +119,12 @@ class Sidebar(QWidget):
             """)
             self.nav_buttons.append(btn)
             self.btn_group.addButton(btn, index)
-            btn.clicked.connect(lambda checked, idx=index: self._on_nav_clicked(idx))
             layout.addWidget(btn)
 
         self.btn_group.idClicked.connect(self._on_nav_clicked)
+
+        # By default hide instructor tab until role check
+        self.nav_buttons[5].hide()
 
         if self.nav_buttons:
             self.nav_buttons[0].setChecked(True)
@@ -185,19 +188,6 @@ class Sidebar(QWidget):
                 background-color: transparent;
                 color: #f87171;
                 border: 1px solid rgba(239, 68, 68, 0.25);
-    def update_notifications(self):
-        try:
-            data = api.get("/notifications/unread-count")
-            count = data.get("unread", 0)
-            # Presupunând că indexul 2 este "Teme & Proiecte"
-            if count > 0:
-                self.nav_buttons[2].badge.setText(str(count))
-                self.nav_buttons[2].badge.show()
-            else:
-                self.nav_buttons[2].badge.hide()
-        except:
-            pass
-
                 border-radius: 8px;
                 padding: 8px 12px;
                 font-size: 12px;
@@ -207,10 +197,6 @@ class Sidebar(QWidget):
                 background-color: rgba(239, 68, 68, 0.12);
                 border-color: #ef4444;
                 color: #ffffff;
-    def set_page_visible(self, index, visible):
-        if 0 <= index < len(self.nav_buttons):
-            self.nav_buttons[index].setVisible(visible)
-
             }
         """)
         logout_btn.clicked.connect(self.logout_requested.emit)
@@ -223,15 +209,36 @@ class Sidebar(QWidget):
         if 0 <= index < len(self.nav_buttons):
             self.nav_buttons[index].setChecked(True)
 
+    def set_page_visible(self, index: int, visible: bool):
+        if 0 <= index < len(self.nav_buttons):
+            self.nav_buttons[index].setVisible(visible)
+
+    def update_sidebar_visibility(self):
+        user = auth.current_user
+        is_instructor = user and user.get("role") in ["instructor", "admin"]
+        self.set_page_visible(5, is_instructor)
+
+    def update_notifications(self):
+        try:
+            data = api.get("/notifications/unread-count")
+            count = data.get("unread", 0)
+            if count > 0:
+                self.nav_buttons[2].setText(f"📝  Teme & Proiecte ({count})")
+            else:
+                self.nav_buttons[2].setText("📝  Teme & Proiecte")
+        except Exception:
+            pass
+
     def update_user_info(self):
         user = auth.current_user
         if user:
             name = user.get("full_name", "Student")
             code = user.get("student_code", "")
+            role = user.get("role", "student")
             self.user_name_lbl.setText(name)
-            self.user_code_lbl.setText(f"{code} • Student" if code else "Student")
-            
-            # Generate initials
+            role_label = "Profesor" if role in ["instructor", "admin"] else "Student"
+            self.user_code_lbl.setText(f"{code} • {role_label}" if code else role_label)
+
             parts = name.split()
             if len(parts) >= 2:
                 initials = f"{parts[0][0]}{parts[1][0]}".upper()
@@ -240,3 +247,4 @@ class Sidebar(QWidget):
             else:
                 initials = "ST"
             self.avatar_lbl.setText(initials)
+            self.update_sidebar_visibility()

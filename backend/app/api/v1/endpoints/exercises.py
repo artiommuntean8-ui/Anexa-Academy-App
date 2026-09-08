@@ -1,8 +1,8 @@
 import sys
 import io
 import contextlib
-import multiprocessing
-from fastapi import APIRouter, Depends, HTTPException
+import bdb
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api.deps import get_current_user
@@ -12,6 +12,31 @@ from app.models.test_case import TestCase
 from typing import List, Dict, Any
 
 router = APIRouter()
+
+class TraceDebugger(bdb.Bdb):
+    def __init__(self):
+        super().__init__()
+        self.trace_data = []
+
+    def user_line(self, frame):
+        line_no = frame.f_lineno
+        locals_copy = {k: str(v) for k, v in frame.f_locals.items() if not k.startswith('__')}
+        self.trace_data.append({'line': line_no, 'vars': locals_copy})
+
+def _execute_code_with_trace(code: str) -> Dict[str, Any]:
+    debugger = TraceDebugger()
+    try:
+        debugger.run(code)
+        return {'success': True, 'trace': debugger.trace_data}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@router.post('/trace')
+def trace_code(
+    data: dict,
+    current_user: Student = Depends(get_current_user)
+):
+    return _execute_code_with_trace(data.get('code', ''))
 
 def _execute_code_sandbox(code: str) -> Dict[str, Any]:
     stdout_buf = io.StringIO()

@@ -10,4 +10,4 @@ class TestCase(Base):
     expected_output = Column(Text, nullable=False) 
     is_hidden = Column(Boolean, default=False)
     
-    assignment = relationship('Assignment', back_populates='test_cases')
+    assignment = relationship('Assignment', back_populates='test_cases_rel')

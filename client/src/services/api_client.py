@@ -1,110 +1,50 @@
-from typing import Any, Dict, Optional
-import requests
-from client.src.config import API_BASE_URL, API_TIMEOUT
+import httpx
+from PySide6.QtCore import QObject, Signal, QRunnable, QThreadPool
+from client.src.config import API_BASE_URL
 
+class WorkerSignals(QObject):
+    result = Signal(object)
+    error = Signal(str)
+
+class APICallWorker(QRunnable):
+    def __init__(self, method, endpoint, data=None, token=None):
+        super().__init__()
+        self.method = method
+        self.endpoint = endpoint
+        self.data = data
+        self.token = token
+        self.signals = WorkerSignals()
+
+    def run(self):
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        url = f"{API_BASE_URL}{self.endpoint}"
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                response = client.request(self.method, url, json=self.data, headers=headers)
+                response.raise_for_status()
+                # Returnăm json() sau un dict gol dacă nu există conținut
+                self.signals.result.emit(response.json() if response.content else {})
+        except Exception as e:
+            self.signals.error.emit(str(e))
 
 class APIClient:
-    """Centralized HTTP client for communicating with FastAPI backend."""
-    
-    def __init__(self, base_url: str = API_BASE_URL):
-        self.base_url = base_url.rstrip("/")
-        self.session = requests.Session()
-        self.token: Optional[str] = None
+    def __init__(self):
+        self.threadpool = QThreadPool()
+        self.token = None
 
-    def set_token(self, token: Optional[str]) -> None:
-        """Set or remove the JWT authorization token in session headers."""
+    def set_token(self, token):
         self.token = token
-        if token:
-            self.session.headers.update({"Authorization": f"Bearer {token}"})
-        else:
-            self.session.headers.pop("Authorization", None)
 
-    def _url(self, endpoint: str) -> str:
-        if not endpoint.startswith("/"):
-            endpoint = "/" + endpoint
-        return f"{self.base_url}{endpoint}"
+    def post(self, endpoint, data, callback, error_callback):
+        worker = APICallWorker("POST", endpoint, data, self.token)
+        worker.signals.result.connect(callback)
+        worker.signals.error.connect(error_callback)
+        self.threadpool.start(worker)
 
-    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Perform a GET request."""
-        try:
-            response = self.session.get(
-                self._url(endpoint),
-                params=params,
-                timeout=API_TIMEOUT
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.ConnectionError:
-            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
-        except requests.exceptions.HTTPError as e:
-            detail = self._extract_error_detail(response)
-            raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")
-        except Exception as e:
-            raise RuntimeError(str(e))
+    def get(self, endpoint, callback, error_callback):
+        worker = APICallWorker("GET", endpoint, None, self.token)
+        worker.signals.result.connect(callback)
+        worker.signals.error.connect(error_callback)
+        self.threadpool.start(worker)
 
-    def post(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Perform a POST request."""
-        try:
-            response = self.session.post(
-                self._url(endpoint),
-                json=json_data,
-                timeout=API_TIMEOUT
-            )
-            response.raise_for_status()
-            if response.content:
-                return response.json()
-            return {}
-        except requests.exceptions.ConnectionError:
-            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
-        except requests.exceptions.HTTPError as e:
-            detail = self._extract_error_detail(response)
-            raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")
-        except Exception as e:
-            raise RuntimeError(str(e))
-
-    def put(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Perform a PUT request."""
-        try:
-            response = self.session.put(
-                self._url(endpoint),
-                json=json_data,
-                timeout=API_TIMEOUT
-            )
-            response.raise_for_status()
-            return response.json() if response.content else {}
-        except requests.exceptions.ConnectionError:
-            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
-        except requests.exceptions.HTTPError as e:
-            detail = self._extract_error_detail(response)
-            raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")
-        except Exception as e:
-            raise RuntimeError(str(e))
-
-    def delete(self, endpoint: str) -> None:
-        """Perform a DELETE request."""
-        try:
-            response = self.session.delete(
-                self._url(endpoint),
-                timeout=API_TIMEOUT
-            )
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError:
-            raise RuntimeError("Nu s-a putut realiza conexiunea la serverul backend. Asigurați-vă că serverul este pornit.")
-        except requests.exceptions.HTTPError as e:
-            detail = self._extract_error_detail(response)
-            raise RuntimeError(detail or f"Eroare HTTP ({response.status_code})")
-        except Exception as e:
-            raise RuntimeError(str(e))
-
-    def _extract_error_detail(self, response: requests.Response) -> Optional[str]:
-        try:
-            err = response.json()
-            if isinstance(err, dict) and "detail" in err:
-                return str(err["detail"])
-        except Exception:
-            pass
-        return None
-
-
-# Global singleton instance
 api = APIClient()

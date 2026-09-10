@@ -25,6 +25,8 @@ from client.src.views.grades_view import GradesView
 from client.src.views.profile_view import ProfileView
 from client.src.views.exercise_view import ExerciseView
 from client.src.views.student_management_view import StudentManagementView
+from client.src.views.sandbox_view import SandboxView
+
 from client.src.services.auth_service import auth
 
 
@@ -94,6 +96,9 @@ class MainWindow(QMainWindow):
         self.views_stack.addWidget(self.dashboard_view)    # Index 0
         self.views_stack.addWidget(self.courses_view)      # Index 1
         self.views_stack.addWidget(self.assignments_view)  # Index 2
+        self.sandbox_view = SandboxView()
+        self.views_stack.addWidget(self.sandbox_view)      # Index 7
+
         self.views_stack.addWidget(self.grades_view)       # Index 3
         self.views_stack.addWidget(self.profile_view)      # Index 4
         self.views_stack.addWidget(self.students_view)     # Index 5

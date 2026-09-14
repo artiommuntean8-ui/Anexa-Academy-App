@@ -38,19 +38,18 @@ def trace_code(
 ):
     return _execute_code_with_trace(data.get('code', ''))
 
-def _execute_code_sandbox(code: str) -> Dict[str, Any]:
-    stdout_buf = io.StringIO()
-    safe_builtins = {
-        'print': print, 'range': range, 'len': len, 'str': str, 
-        'int': int, 'float': float, 'bool': bool
+from app.services.docker_sandbox import sandbox_service
+
+def _execute_code_sandbox(code: str, input_data: str = "") -> Dict[str, Any]:
+    res = sandbox_service.run_code(code, input_data=input_data, timeout=3.5)
+    return {
+        'success': res.exit_code == 0,
+        'stdout': res.stdout,
+        'stderr': res.stderr,
+        'error': res.error,
+        'runner': res.runner,
+        'execution_time_ms': res.execution_time_ms,
     }
-    local_scope: Dict[str, Any] = {}
-    try:
-        with contextlib.redirect_stdout(stdout_buf):
-            exec(code, {'__builtins__': safe_builtins}, local_scope)
-        return {'success': True, 'stdout': stdout_buf.getvalue()}
-    except Exception as e:
-        return {'success': False, 'stdout': stdout_buf.getvalue(), 'error': str(e)}
 
 @router.post('/validate')
 def validate_code(
@@ -66,8 +65,9 @@ def validate_code(
     all_passed = True
     
     for tc in test_cases:
-        run_res = _execute_code_sandbox(code)
+        run_res = _execute_code_sandbox(code, input_data=tc.input_data or "")
         passed = run_res['success'] and run_res['stdout'].strip() == tc.expected_output.strip()
+
         
         results.append({
             'test_id': tc.id,

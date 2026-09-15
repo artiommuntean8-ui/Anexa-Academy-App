@@ -134,3 +134,71 @@ def get_sandbox_status():
             "default_timeout_s": sandbox_service.default_timeout,
         },
     }
+
+
+class SandboxSubmitRequest(BaseModel):
+    code: str
+    exercise_id: int
+    user_id: Optional[int] = None
+    timeout: Optional[float] = 3.5
+
+
+@router.post("/submit", summary="Trimitere soluție cu validare automată și acordare Gamification")
+def submit_code(
+    request: SandboxSubmitRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Execută codul în Sandbox și acordă XP, actualizează streak-ul și deblochează insigne dacă testele trec.
+    """
+    from app.services import gamification_service
+    from app.models.assignment import Assignment
+
+    db_cases = db.query(TestCase).filter(TestCase.assignment_id == request.exercise_id).all()
+    test_cases_items = [
+        TestCaseItem(
+            id=tc.id,
+            input_data=tc.input_data or "",
+            expected_output=tc.expected_output,
+            is_hidden=bool(tc.is_hidden)
+        )
+        for tc in db_cases
+    ]
+
+    suite_res = sandbox_service.run_test_cases(request.code, test_cases_items, timeout=request.timeout)
+    total_exec_time = sum(r.execution_time_ms for r in suite_res.results) if suite_res.results else 0.0
+
+    target_user_id = request.user_id
+    if not target_user_id:
+        first_student = db.query(Student).filter(Student.role == "student").first()
+        if first_student:
+            target_user_id = first_student.id
+
+    gamification_result = None
+    if target_user_id:
+        gamification_result = gamification_service.record_submission_and_award_xp(
+            db=db,
+            student_id=target_user_id,
+            assignment_id=request.exercise_id,
+            code=request.code,
+            passed=suite_res.all_passed,
+            execution_time_ms=total_exec_time,
+        )
+
+    return {
+        "status": "success" if suite_res.all_passed else "failed",
+        "all_passed": suite_res.all_passed,
+        "score": suite_res.score,
+        "passed_count": suite_res.passed_count,
+        "total_count": suite_res.total_count,
+        "results": [r.model_dump() for r in suite_res.results],
+        "runner": suite_res.runner,
+        "gamification": gamification_result,
+        "xp_awarded": gamification_result.get("xp_awarded", 0) if gamification_result else 0,
+        "total_xp": gamification_result.get("total_xp", 0) if gamification_result else 0,
+        "level": gamification_result.get("level", 1) if gamification_result else 1,
+        "level_up": gamification_result.get("level_up", False) if gamification_result else False,
+        "new_level": gamification_result.get("new_level", 1) if gamification_result else 1,
+        "newly_unlocked_badges": gamification_result.get("newly_unlocked_badges", []) if gamification_result else [],
+    }
+

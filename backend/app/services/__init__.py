@@ -6,6 +6,7 @@ from app.services.docker_sandbox import (
     TestRunResult,
     TestSuiteResult,
 )
+from app.services import gamification_service
 
 __all__ = [
     "sandbox_service",
@@ -14,4 +15,5 @@ __all__ = [
     "TestCaseItem",
     "TestRunResult",
     "TestSuiteResult",
+    "gamification_service",
 ]

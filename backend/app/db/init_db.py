@@ -12,9 +12,49 @@ from app.models.enrollment import Enrollment
 from app.models.assignment import Assignment
 from app.models.grade import Grade
 from app.models.achievement import Achievement, StudentAchievement
+from app.models.gamification import Badge, UserBadge, Submission
 
+
+INITIAL_BADGES = [
+    {
+        "code": "FIRST_BLOOD",
+        "title": "Primul Pas Victorios",
+        "description": "Ai rezolvat cu succes primul tău exercițiu!",
+        "icon_name": "⚔️",
+        "xp_reward": 50,
+    },
+    {
+        "code": "STREAK_3",
+        "title": "Flacăra Cunoașterii",
+        "description": "Ai fost activ 3 zile consecutive.",
+        "icon_name": "🔥",
+        "xp_reward": 75,
+    },
+    {
+        "code": "SPEED_DEMON",
+        "title": "Viteza Luminii",
+        "description": "Cod optimizat executat în mai puțin de 300 ms.",
+        "icon_name": "⚡",
+        "xp_reward": 100,
+    },
+    {
+        "code": "PERFECT_ATTEMPT",
+        "title": "Din Prima!",
+        "description": "Ai trecut toate cazurile de test din prima încercare.",
+        "icon_name": "🎯",
+        "xp_reward": 60,
+    },
+    {
+        "code": "PYTHON_PRO",
+        "title": "Maestru Python",
+        "description": "Ai acumulat cel puțin 300 XP în academie.",
+        "icon_name": "🐍",
+        "xp_reward": 150,
+    },
+]
 
 INITIAL_ACHIEVEMENTS = [
+
     {
         "code": "FIRST_CODE",
         "title": "Primul Pas în Python",
@@ -155,6 +195,9 @@ DEMO_USERS = [
         "role": "student",
         "department": "Software Architecture & Engineering",
         "semester": 2,
+        "xp": 280,
+        "level": 3,
+        "streak_days": 4,
     },
     {
         "student_code": "TEACH-001",
@@ -164,6 +207,9 @@ DEMO_USERS = [
         "role": "instructor",
         "department": "Academia ArkiTech",
         "semester": 1,
+        "xp": 0,
+        "level": 1,
+        "streak_days": 0,
     },
     {
         "student_code": "ELEV-001",
@@ -173,6 +219,9 @@ DEMO_USERS = [
         "role": "student",
         "department": "Grupa A (Python Junior)",
         "semester": 1,
+        "xp": 450,
+        "level": 5,
+        "streak_days": 7,
     },
     {
         "student_code": "ELEV-002",
@@ -182,6 +231,9 @@ DEMO_USERS = [
         "role": "student",
         "department": "Grupa A (Python Junior)",
         "semester": 1,
+        "xp": 320,
+        "level": 4,
+        "streak_days": 3,
     },
     {
         "student_code": "ELEV-003",
@@ -191,6 +243,9 @@ DEMO_USERS = [
         "role": "student",
         "department": "Grupa B (Python Junior)",
         "semester": 1,
+        "xp": 150,
+        "level": 2,
+        "streak_days": 1,
     },
 ]
 
@@ -198,8 +253,8 @@ DEMO_USERS = [
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     
-    # Auto-migration: check if starter_code or test_cases are missing in assignments
     with engine.connect() as conn:
+        # Auto-migration: check if starter_code or test_cases are missing in assignments
         try:
             res = conn.execute(text("PRAGMA table_info(assignments);")).fetchall()
             col_names = [r[1] for r in res]
@@ -209,12 +264,29 @@ def init_db() -> None:
                 conn.execute(text("ALTER TABLE assignments ADD COLUMN test_cases TEXT;"))
             conn.commit()
         except Exception as e:
-            print(f"Migration check: {e}")
+            print(f"Migration check assignments: {e}")
+
+        # Auto-migration: check if xp, level, streak_days, last_active_date are missing in students
+        try:
+            res_stud = conn.execute(text("PRAGMA table_info(students);")).fetchall()
+            col_names_stud = [r[1] for r in res_stud]
+            if "xp" not in col_names_stud:
+                conn.execute(text("ALTER TABLE students ADD COLUMN xp INTEGER DEFAULT 0;"))
+            if "level" not in col_names_stud:
+                conn.execute(text("ALTER TABLE students ADD COLUMN level INTEGER DEFAULT 1;"))
+            if "streak_days" not in col_names_stud:
+                conn.execute(text("ALTER TABLE students ADD COLUMN streak_days INTEGER DEFAULT 0;"))
+            if "last_active_date" not in col_names_stud:
+                conn.execute(text("ALTER TABLE students ADD COLUMN last_active_date DATE;"))
+            conn.commit()
+        except Exception as e:
+            print(f"Migration check students: {e}")
 
 
 def _ensure_user(db: Session, user_data: dict) -> Student:
     student = db.query(Student).filter(Student.email == user_data["email"]).first()
     password_hash = get_password_hash(user_data["password"])
+    today = datetime.date.today()
     if not student:
         student = Student(
             student_code=user_data["student_code"],
@@ -224,6 +296,10 @@ def _ensure_user(db: Session, user_data: dict) -> Student:
             role=user_data["role"],
             department=user_data["department"],
             semester=user_data["semester"],
+            xp=user_data.get("xp", 0),
+            level=user_data.get("level", 1),
+            streak_days=user_data.get("streak_days", 0),
+            last_active_date=today if user_data.get("streak_days", 0) > 0 else None,
             is_active=True,
         )
         db.add(student)
@@ -235,9 +311,33 @@ def _ensure_user(db: Session, user_data: dict) -> Student:
         student.role = user_data["role"]
         student.department = user_data["department"]
         student.student_code = user_data["student_code"]
+        if "xp" in user_data and (student.xp == 0 or student.xp is None):
+            student.xp = user_data["xp"]
+            student.level = user_data.get("level", 1)
+            student.streak_days = user_data.get("streak_days", 0)
+            student.last_active_date = today if user_data.get("streak_days", 0) > 0 else None
         student.is_active = True
         db.commit()
     return student
+
+
+def _ensure_badges(db: Session) -> None:
+    for badge_data in INITIAL_BADGES:
+        existing = db.query(Badge).filter(Badge.code == badge_data["code"]).first()
+        if not existing:
+            db.add(Badge(
+                code=badge_data["code"],
+                title=badge_data["title"],
+                description=badge_data["description"],
+                icon_name=badge_data["icon_name"],
+                xp_reward=badge_data["xp_reward"],
+            ))
+        else:
+            existing.title = badge_data["title"]
+            existing.description = badge_data["description"]
+            existing.icon_name = badge_data["icon_name"]
+            existing.xp_reward = badge_data["xp_reward"]
+    db.commit()
 
 
 def _ensure_achievements(db: Session) -> None:
@@ -258,6 +358,7 @@ def _ensure_achievements(db: Session) -> None:
             existing.icon = ach_data["icon"]
             existing.xp_reward = ach_data["xp_reward"]
     db.commit()
+
 
 
 def _ensure_module(db: Session, module_data: dict) -> Course:
@@ -321,8 +422,9 @@ def _enroll_student_in_all_modules(db: Session, student: Student) -> None:
 
 
 def seed_demo_data(db: Session) -> None:
-    """Seed initial achievements, curriculum, users, enrollments and sample progress."""
+    """Seed initial achievements, badges, curriculum, users, enrollments and sample progress."""
     _ensure_achievements(db)
+    _ensure_badges(db)
 
     for user_data in DEMO_USERS:
         _ensure_user(db, user_data)

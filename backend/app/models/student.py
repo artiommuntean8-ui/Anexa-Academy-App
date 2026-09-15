@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -17,6 +17,13 @@ class Student(Base):
     department = Column(String(100), default="Software Engineering")
     semester = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
+
+    # Câmpuri Gamification
+    xp = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=1, nullable=False)
+    streak_days = Column(Integer, default=0, nullable=False)
+    last_active_date = Column(Date, nullable=True)
+
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
@@ -24,3 +31,9 @@ class Student(Base):
     enrollments = relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
     grades = relationship("Grade", back_populates="student", cascade="all, delete-orphan")
     achievements = relationship("StudentAchievement", back_populates="student", cascade="all, delete-orphan")
+    badges = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
+    submissions = relationship("Submission", back_populates="user", cascade="all, delete-orphan")
+
+
+# Alias User = Student pentru compatibilitate cu ambele denumiri
+User = Student

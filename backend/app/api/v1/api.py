@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     health, auth, students, courses, assignments, grades, exercises, notifications, achievements, sandbox, gamification
+from app.api.v1.endpoints import health, auth, students, courses, assignments, grades, exercises, notifications, ai_hints, reports
+
 from app.api.v1.endpoints import health, auth, students, courses, assignments, grades, exercises, notifications, ai_hints
 
 )
@@ -13,6 +15,8 @@ api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(students.router, prefix="/students", tags=["Students"])
 api_router.include_router(courses.router, prefix="/courses", tags=["Courses"])
 api_router.include_router(assignments.router, prefix="/assignments", tags=["Assignments"])
+api_router.include_router(reports.router, prefix="/reports", tags=["Reports"])
+
 api_router.include_router(grades.router, prefix="/grades", tags=["Grades"])
 api_router.include_router(ai_hints.router, prefix="/ai", tags=["AI Hints"])
 

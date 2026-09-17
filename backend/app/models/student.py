@@ -32,7 +32,6 @@ class Student(Base):
     grades = relationship("Grade", back_populates="student", cascade="all, delete-orphan")
     achievements = relationship("StudentAchievement", back_populates="student", cascade="all, delete-orphan")
     badges = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
-    submissions = relationship("Submission", back_populates="user", cascade="all, delete-orphan")
 
 
 # Alias User = Student pentru compatibilitate cu ambele denumiri

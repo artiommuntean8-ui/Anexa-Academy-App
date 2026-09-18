@@ -72,3 +72,6 @@ class Sidebar(QWidget):
         for idx, btn in self.buttons:
             if idx == index:
                 btn.setVisible(visible)
+
+    def update_notifications(self):
+        pass

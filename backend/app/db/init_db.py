@@ -1,450 +1,126 @@
-import json
-import datetime
-import sqlite3
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from app.db.session import engine, Base
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
+
+import app.models  # noqa: F401 — register all ORM tables
+from app.db.session import engine, SessionLocal, Base
+from app.db.init_db import seed_demo_data
 from app.core.security import get_password_hash
-import app.models  # noqa: F401
 from app.models.student import Student
 from app.models.course import Course
-from app.models.enrollment import Enrollment
 from app.models.assignment import Assignment
-from app.models.grade import Grade
-from app.models.achievement import Achievement, StudentAchievement
-from app.models.gamification import Badge, UserBadge, Submission
+from app.models.test_case import TestCase
+from app.models.enrollment import Enrollment
 
 
-INITIAL_BADGES = [
-    {
-        "code": "FIRST_BLOOD",
-        "title": "Primul Pas Victorios",
-        "description": "Ai rezolvat cu succes primul tău exercițiu!",
-        "icon_name": "⚔️",
-        "xp_reward": 50,
-    },
-    {
-        "code": "STREAK_3",
-        "title": "Flacăra Cunoașterii",
-        "description": "Ai fost activ 3 zile consecutive.",
-        "icon_name": "🔥",
-        "xp_reward": 75,
-    },
-    {
-        "code": "SPEED_DEMON",
-        "title": "Viteza Luminii",
-        "description": "Cod optimizat executat în mai puțin de 300 ms.",
-        "icon_name": "⚡",
-        "xp_reward": 100,
-    },
-    {
-        "code": "PERFECT_ATTEMPT",
-        "title": "Din Prima!",
-        "description": "Ai trecut toate cazurile de test din prima încercare.",
-        "icon_name": "🎯",
-        "xp_reward": 60,
-    },
-    {
-        "code": "PYTHON_PRO",
-        "title": "Maestru Python",
-        "description": "Ai acumulat cel puțin 300 XP în academie.",
-        "icon_name": "🐍",
-        "xp_reward": 150,
-    },
-]
-
-INITIAL_ACHIEVEMENTS = [
-
-    {
-        "code": "FIRST_CODE",
-        "title": "Primul Pas în Python",
-        "description": "Rulează și validează primul tău cod cu succes în consolă.",
-        "icon": "🚀",
-        "xp_reward": 50,
-        "category": "general"
-    },
-    {
-        "code": "PERFECT_SCORE",
-        "title": "Perfecțiune Academică",
-        "description": "Obține un punctaj impecabil de 100 puncte la un exercițiu.",
-        "icon": "⭐",
-        "xp_reward": 100,
-        "category": "mastery"
-    },
-    {
-        "code": "LOOP_MASTER",
-        "title": "Maestru al Buclelor",
-        "description": "Rezolvă un exercițiu ce conține instrucțiuni for sau while.",
-        "icon": "⚡",
-        "xp_reward": 150,
-        "category": "python"
-    },
-    {
-        "code": "FUNCTION_PRO",
-        "title": "Arhitect de Funcții",
-        "description": "Scrie și validează o funcție modulară cu parametri și return.",
-        "icon": "🧠",
-        "xp_reward": 150,
-        "category": "python"
-    },
-    {
-        "code": "TRIPLE_CROWN",
-        "title": "Tridentul Cunoașterii",
-        "description": "Finalizează cu succes cel puțin 3 teme notate.",
-        "icon": "🏆",
-        "xp_reward": 200,
-        "category": "mastery"
-    },
-    {
-        "code": "DATA_WIZARD",
-        "title": "Vrăjitorul Structurilor",
-        "description": "Manipulează cu succes colecții de date (liste sau dicționare).",
-        "icon": "🔮",
-        "xp_reward": 150,
-        "category": "python"
-    },
-]
-
-PYTHON_MODULES = [
-    {
-        "code": "PY-01",
-        "title": "Primii pași în Python",
-        "description": "Înveți ce este Python, cum rulezi cod și cum afișezi mesaje în consolă.",
-        "instructor_name": "Prof. Ana Ionescu",
-        "lessons": [
-            {
-                "title": "Comanda print() și afișarea",
-                "description": "Scrie o instrucțiune print care afișează 'Salut, ArkiTech!' în consolă.",
-                "starter_code": "print('Salut, ArkiTech!')\n",
-                "test_cases": json.dumps([
-                    {"type": "stdout_contains", "expected": "Salut", "description": "Verifică dacă mesajul conține 'Salut'"},
-                    {"type": "stdout_contains", "expected": "ArkiTech", "description": "Verifică dacă mesajul conține 'ArkiTech'"}
-                ])
-            },
-            {
-                "title": "Variabile și tipuri de date",
-                "description": "Definește două variabile x=10 și y=20 și afișează suma lor.",
-                "starter_code": "x = 10\ny = 20\nprint(x + y)\n",
-                "test_cases": json.dumps([
-                    {"type": "stdout_contains", "expected": "30", "description": "Verifică dacă suma afișată este 30"}
-                ])
-            }
-        ],
-    },
-    {
-        "code": "PY-02",
-        "title": "Decizii în cod (if / else)",
-        "description": "Înveți să faci programul să aleagă ramura potrivită cu if și else.",
-        "instructor_name": "Prof. Ana Ionescu",
-        "lessons": [
-            {
-                "title": "Verificare Par / Impar",
-                "description": "Creează o funcție este_par(numar) care returnează True dacă numărul este par și False dacă este impar.",
-                "starter_code": "def este_par(numar):\n    return numar % 2 == 0\n",
-                "test_cases": json.dumps([
-                    {"type": "call", "call": "este_par(4)", "expected": True, "description": "Test 4 este par"},
-                    {"type": "call", "call": "este_par(7)", "expected": False, "description": "Test 7 este impar"},
-                    {"type": "call", "call": "este_par(0)", "expected": True, "description": "Test 0 este par"}
-                ])
-            }
-        ],
-    },
-    {
-        "code": "PY-03",
-        "title": "Repetări (bucle for & while)",
-        "description": "Înveți cum repetă un program anumite acțiuni automat cu bucle.",
-        "instructor_name": "Prof. Ana Ionescu",
-        "lessons": [
-            {
-                "title": "Suma primelor N numere",
-                "description": "Creează o funcție suma_pana_la(n) care calculează suma 1 + 2 + ... + n folosind o buclă.",
-                "starter_code": "def suma_pana_la(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total\n",
-                "test_cases": json.dumps([
-                    {"type": "call", "call": "suma_pana_la(5)", "expected": 15, "description": "Suma până la 5 (1+2+3+4+5=15)"},
-                    {"type": "call", "call": "suma_pana_la(10)", "expected": 55, "description": "Suma până la 10 (55)"}
-                ])
-            }
-        ],
-    },
-    {
-        "code": "PY-04",
-        "title": "Funcții & Modularitate",
-        "description": "Înveți să îți organizezi codul în funcții reutilizabile și flexibile.",
-        "instructor_name": "Prof. Ana Ionescu",
-        "lessons": [
-            {
-                "title": "Mini-Calculator de operații",
-                "description": "Creează funcția calculator(a, b, op) care suportă '+', '-', '*'.",
-                "starter_code": "def calculator(a, b, op):\n    if op == '+': return a + b\n    elif op == '-': return a - b\n    elif op == '*': return a * b\n    return 0\n",
-                "test_cases": json.dumps([
-                    {"type": "call", "call": "calculator(10, 5, '+')", "expected": 15, "description": "10 + 5 = 15"},
-                    {"type": "call", "call": "calculator(20, 8, '-')", "expected": 12, "description": "20 - 8 = 12"},
-                    {"type": "call", "call": "calculator(6, 7, '*')", "expected": 42, "description": "6 * 7 = 42"}
-                ])
-            }
-        ],
-    }
-]
-
-DEMO_USERS = [
-    {
-        "student_code": "ARK-2026-001",
-        "full_name": "Artiom Muntean",
-        "email": "artiom.muntean@arkitech.academy",
-        "password": "ArkiTech2026!",
-        "role": "student",
-        "department": "Software Architecture & Engineering",
-        "semester": 2,
-        "xp": 280,
-        "level": 3,
-        "streak_days": 4,
-    },
-    {
-        "student_code": "TEACH-001",
-        "full_name": "Prof. Ana Ionescu",
-        "email": "prof.an@pythonkids.ro",
-        "password": "Prof2026!",
-        "role": "instructor",
-        "department": "Academia ArkiTech",
-        "semester": 1,
-        "xp": 0,
-        "level": 1,
-        "streak_days": 0,
-    },
-    {
-        "student_code": "ELEV-001",
-        "full_name": "Andrei Popescu",
-        "email": "andrei@pythonkids.ro",
-        "password": "Elev2026!",
-        "role": "student",
-        "department": "Grupa A (Python Junior)",
-        "semester": 1,
-        "xp": 450,
-        "level": 5,
-        "streak_days": 7,
-    },
-    {
-        "student_code": "ELEV-002",
-        "full_name": "Maria Dumitrescu",
-        "email": "maria@pythonkids.ro",
-        "password": "Elev2026!",
-        "role": "student",
-        "department": "Grupa A (Python Junior)",
-        "semester": 1,
-        "xp": 320,
-        "level": 4,
-        "streak_days": 3,
-    },
-    {
-        "student_code": "ELEV-003",
-        "full_name": "David Munteanu",
-        "email": "david@pythonkids.ro",
-        "password": "Elev2026!",
-        "role": "student",
-        "department": "Grupa B (Python Junior)",
-        "semester": 1,
-        "xp": 150,
-        "level": 2,
-        "streak_days": 1,
-    },
-]
-
-
-def init_db() -> None:
-    Base.metadata.create_all(bind=engine)
-    
-    with engine.connect() as conn:
-        # Auto-migration: check if starter_code or test_cases are missing in assignments
-        try:
-            res = conn.execute(text("PRAGMA table_info(assignments);")).fetchall()
-            col_names = [r[1] for r in res]
-            if "starter_code" not in col_names:
-                conn.execute(text("ALTER TABLE assignments ADD COLUMN starter_code TEXT;"))
-            if "test_cases" not in col_names:
-                conn.execute(text("ALTER TABLE assignments ADD COLUMN test_cases TEXT;"))
-            conn.commit()
-        except Exception as e:
-            print(f"Migration check assignments: {e}")
-
-        # Auto-migration: check if xp, level, streak_days, last_active_date are missing in students
-        try:
-            res_stud = conn.execute(text("PRAGMA table_info(students);")).fetchall()
-            col_names_stud = [r[1] for r in res_stud]
-            if "xp" not in col_names_stud:
-                conn.execute(text("ALTER TABLE students ADD COLUMN xp INTEGER DEFAULT 0;"))
-            if "level" not in col_names_stud:
-                conn.execute(text("ALTER TABLE students ADD COLUMN level INTEGER DEFAULT 1;"))
-            if "streak_days" not in col_names_stud:
-                conn.execute(text("ALTER TABLE students ADD COLUMN streak_days INTEGER DEFAULT 0;"))
-            if "last_active_date" not in col_names_stud:
-                conn.execute(text("ALTER TABLE students ADD COLUMN last_active_date DATE;"))
-            conn.commit()
-        except Exception as e:
-            print(f"Migration check students: {e}")
-
-
-def _ensure_user(db: Session, user_data: dict) -> Student:
-    student = db.query(Student).filter(Student.email == user_data["email"]).first()
-    password_hash = get_password_hash(user_data["password"])
-    today = datetime.date.today()
-    if not student:
-        student = Student(
-            student_code=user_data["student_code"],
-            full_name=user_data["full_name"],
-            email=user_data["email"],
-            hashed_password=password_hash,
-            role=user_data["role"],
-            department=user_data["department"],
-            semester=user_data["semester"],
-            xp=user_data.get("xp", 0),
-            level=user_data.get("level", 1),
-            streak_days=user_data.get("streak_days", 0),
-            last_active_date=today if user_data.get("streak_days", 0) > 0 else None,
-            is_active=True,
-        )
-        db.add(student)
-        db.commit()
-        db.refresh(student)
-    else:
-        student.hashed_password = password_hash
-        student.full_name = user_data["full_name"]
-        student.role = user_data["role"]
-        student.department = user_data["department"]
-        student.student_code = user_data["student_code"]
-        if "xp" in user_data and (student.xp == 0 or student.xp is None):
-            student.xp = user_data["xp"]
-            student.level = user_data.get("level", 1)
-            student.streak_days = user_data.get("streak_days", 0)
-            student.last_active_date = today if user_data.get("streak_days", 0) > 0 else None
-        student.is_active = True
-        db.commit()
-    return student
-
-
-def _ensure_badges(db: Session) -> None:
-    for badge_data in INITIAL_BADGES:
-        existing = db.query(Badge).filter(Badge.code == badge_data["code"]).first()
-        if not existing:
-            db.add(Badge(
-                code=badge_data["code"],
-                title=badge_data["title"],
-                description=badge_data["description"],
-                icon_name=badge_data["icon_name"],
-                xp_reward=badge_data["xp_reward"],
-            ))
-        else:
-            existing.title = badge_data["title"]
-            existing.description = badge_data["description"]
-            existing.icon_name = badge_data["icon_name"]
-            existing.xp_reward = badge_data["xp_reward"]
-    db.commit()
-
-
-def _ensure_achievements(db: Session) -> None:
-    for ach_data in INITIAL_ACHIEVEMENTS:
-        existing = db.query(Achievement).filter(Achievement.code == ach_data["code"]).first()
-        if not existing:
-            db.add(Achievement(
-                code=ach_data["code"],
-                title=ach_data["title"],
-                description=ach_data["description"],
-                icon=ach_data["icon"],
-                xp_reward=ach_data["xp_reward"],
-                category=ach_data["category"],
-            ))
-        else:
-            existing.title = ach_data["title"]
-            existing.description = ach_data["description"]
-            existing.icon = ach_data["icon"]
-            existing.xp_reward = ach_data["xp_reward"]
-    db.commit()
-
-
-
-def _ensure_module(db: Session, module_data: dict) -> Course:
-    module = db.query(Course).filter(Course.code == module_data["code"]).first()
-    if not module:
-        module = Course(
-            code=module_data["code"],
-            title=module_data["title"],
-            description=module_data["description"],
-            instructor_name=module_data["instructor_name"],
+def _ensure_anexa_lab_course(db) -> Course:
+    course = db.query(Course).filter(Course.code == "ANX-LAB").first()
+    if not course:
+        course = Course(
+            code="ANX-LAB",
+            title="Laborator Anexa Academy",
+            description="Exerciții interactive evaluate în Sandbox Docker.",
+            instructor_name="Mihail Potlog",
             semester=1,
-            credits=len(module_data["lessons"]) * 2,
+            credits=5,
         )
-        db.add(module)
+        db.add(course)
         db.commit()
-        db.refresh(module)
-    else:
-        module.title = module_data["title"]
-        module.description = module_data["description"]
-        module.instructor_name = module_data["instructor_name"]
-        module.credits = len(module_data["lessons"]) * 2
+        db.refresh(course)
+    return course
+
+
+def _ensure_lab_assignments(db, course: Course) -> None:
+    assignments = [
+        ("Print Salut", "Afișează mesajul: 'Salut, Anexa Academy!'", "print('Salut, Anexa Academy!')"),
+        ("Suma a două numere", "Citește două numere și afișează suma.", "a = int(input())\nb = int(input())\nprint(a+b)"),
+        ("Par sau Impar", "Afișează 'Par' sau 'Impar'.", "n = int(input())\nprint('Par' if n % 2 == 0 else 'Impar')"),
+        ("Inversare Text", "Inversează textul dat.", "t = input()\nprint(t[::-1])"),
+        ("Calcul Factorial", "Calculează factorialul unui număr.", "import math\nn = int(input())\nprint(math.factorial(n))"),
+    ]
+    test_cases_data = [
+        [("n/a", "Salut, Anexa Academy!", False)],
+        [("3\n5", "8", False), ("-2\n10", "8", True), ("0\n0", "0", True)],
+        [("4", "Par", False), ("7", "Impar", False), ("0", "Par", True)],
+        [("python", "nohtyp", False), ("Anexa", "axenA", True)],
+        [("5", "120", False), ("3", "6", True)],
+    ]
+
+    for i, (title, desc, code) in enumerate(assignments):
+        assign = db.query(Assignment).filter(
+            Assignment.course_id == course.id,
+            Assignment.title == title,
+        ).first()
+        if not assign:
+            assign = Assignment(
+                title=title,
+                description=desc,
+                starter_code=code,
+                course_id=course.id,
+            )
+            db.add(assign)
+            db.commit()
+            db.refresh(assign)
+
+        existing = db.query(TestCase).filter(TestCase.assignment_id == assign.id).count()
+        if existing == 0:
+            for tc in test_cases_data[i]:
+                db.add(
+                    TestCase(
+                        assignment_id=assign.id,
+                        input_data=tc[0],
+                        expected_output=tc[1],
+                        is_hidden=tc[2],
+                    )
+                )
+    db.commit()
+
+
+def seed_db():
+    print("Curatare si populare baza de date SQLite...")
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        seed_demo_data(db)
+        course = _ensure_anexa_lab_course(db)
+        _ensure_lab_assignments(db, course)
+
+        students = db.query(Student).filter(Student.role == "student").all()
+        for student in students:
+            existing = db.query(Enrollment).filter(
+                Enrollment.student_id == student.id,
+                Enrollment.course_id == course.id,
+            ).first()
+            if not existing:
+                db.add(Enrollment(student_id=student.id, course_id=course.id, status="active"))
         db.commit()
 
-    for lesson_item in module_data["lessons"]:
-        existing = db.query(Assignment).filter(
-            Assignment.course_id == module.id,
-            Assignment.title == lesson_item["title"],
-        ).first()
-        if not existing:
-            db.add(Assignment(
-                course_id=module.id,
-                title=lesson_item["title"],
-                description=lesson_item["description"],
-                starter_code=lesson_item.get("starter_code", ""),
-                test_cases=lesson_item.get("test_cases", "[]"),
-                max_score=100.0,
-                due_date=datetime.datetime.utcnow() + datetime.timedelta(days=7),
-            ))
-        else:
-            existing.description = lesson_item["description"]
-            existing.starter_code = lesson_item.get("starter_code", "")
-            existing.test_cases = lesson_item.get("test_cases", "[]")
-    db.commit()
-    return module
+        # Guarantee documented credentials (hash refresh)
+        for email, password in (
+            ("profesor@anexa.md", "profesor123"),
+            ("artiom@anexa.md", "student123"),
+            ("elev@anexa.md", "student123"),
+        ):
+            user = db.query(Student).filter(Student.email == email).first()
+            if user:
+                user.hashed_password = get_password_hash(password)
+        db.commit()
 
-
-def _enroll_student_in_all_modules(db: Session, student: Student) -> None:
-    modules = db.query(Course).all()
-    for module in modules:
-        existing = db.query(Enrollment).filter(
-            Enrollment.student_id == student.id,
-            Enrollment.course_id == module.id,
-        ).first()
-        if not existing:
-            db.add(Enrollment(
-                student_id=student.id,
-                course_id=module.id,
-                status="active",
-            ))
-    db.commit()
-
-
-def seed_demo_data(db: Session) -> None:
-    """Seed initial achievements, badges, curriculum, users, enrollments and sample progress."""
-    _ensure_achievements(db)
-    _ensure_badges(db)
-
-    for user_data in DEMO_USERS:
-        _ensure_user(db, user_data)
-
-    for module_data in PYTHON_MODULES:
-        _ensure_module(db, module_data)
-
-    students = db.query(Student).filter(Student.role == "student").all()
-    for student in students:
-        _enroll_student_in_all_modules(db, student)
+        print("[SUCCESS] Baza de date a fost populata cu succes!")
+        print("Credentiale:")
+        print("Instructor: profesor@anexa.md / profesor123")
+        print("Elev: artiom@anexa.md / student123")
+        print("Elev: elev@anexa.md / student123")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
-    from app.db.session import SessionLocal
-    print("Initialising database tables...")
-    init_db()
-    db = SessionLocal()
-    try:
-        print("Seeding demo data & achievements...")
-        seed_demo_data(db)
-        print("Done!")
-    finally:
-        db.close()
+    seed_db()

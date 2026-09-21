@@ -100,7 +100,7 @@ class SecureLocalSandbox:
     def run_code(self, code: str, input_data: str = "", timeout: float = 3.5) -> ExecutionResult:
         start_time = time.perf_counter()
         runner_script = self._build_runner_script(code, input_data)
-        
+
         proc = None
         try:
             proc = subprocess.Popen(
@@ -148,6 +148,7 @@ class SecureLocalSandbox:
                 warning="Executat via Local Sandbox Fallback (Docker Daemon indisponibil).",
             )
         except Exception as e:
+            logger.error(f"Error in local sandbox execution: {e}")
             elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
             return ExecutionResult(
                 stdout="",
@@ -261,6 +262,7 @@ class DockerSandboxRunner:
 
         client = self.get_docker_client()
         if not client:
+            logger.warning("Docker client unavailable, switching to fallback")
             return self.fallback.run_code(code, input_data=input_data, timeout=actual_timeout)
 
         runner_script = self._build_runner_script(code, input_data)
@@ -302,8 +304,9 @@ class DockerSandboxRunner:
                         state = attrs.get("State", {})
                         exit_code = state.get("ExitCode", 0)
                         break
-                except (NotFound, APIError):
+                except (NotFound, APIError) as e:
                     # Dacă auto_remove=True a șters deja containerul la terminare
+                    logger.debug(f"Container not found during reload: {e}")
                     is_finished = True
                     break
                 time.sleep(0.05)
@@ -336,9 +339,9 @@ class DockerSandboxRunner:
                 raw_stderr = container.logs(stdout=False, stderr=True)
                 stdout_str = raw_stdout.decode("utf-8", errors="replace") if isinstance(raw_stdout, bytes) else str(raw_stdout or "")
                 stderr_str = raw_stderr.decode("utf-8", errors="replace") if isinstance(raw_stderr, bytes) else str(raw_stderr or "")
-            except Exception:
+            except Exception as e:
                 # În caz că auto_remove a șters containerul înainte de logs
-                pass
+                logger.debug(f"Error extracting container logs: {e}")
 
             elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
             run_status = "success" if exit_code == 0 else "error"
@@ -365,8 +368,8 @@ class DockerSandboxRunner:
             if container is not None:
                 try:
                     container.remove(force=True)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Error removing container: {e}")
 
     def run_test_cases(
         self,

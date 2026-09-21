@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
+import logging
 from client.src.components.progress_card import ProgressCard
 from client.src.components.stat_card import StatCard
 from client.src.components.badge import StatusBadge
@@ -11,6 +12,8 @@ from client.src.components.xp_bar import XPBar
 from client.src.components.achievement_card import AchievementCard
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
+
+logger = logging.getLogger("client.dashboard_view")
 
 
 class DashboardView(QWidget):
@@ -149,7 +152,8 @@ class DashboardView(QWidget):
                 total = prog.get("total_lessons", max(1, len(enrolled) * 4))
                 pct = prog.get("overall_progress_percent", 0)
                 modules_data = prog.get("modules", [])
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error loading progress: {e}")
                 completed = len(dash.get("recent_grades", []))
                 total = max(1, len(enrolled) * 4)
                 pct = int((completed / total) * 100) if total else 0
@@ -171,12 +175,17 @@ class DashboardView(QWidget):
                 )
                 self._render_achievements(ach_data.get("achievements", []))
             except Exception as e:
-                print(f"Error loading achievements: {e}")
+                logger.error(f"Error loading achievements: {e}")
 
             self._render_modules(modules_data if modules_data else enrolled)
 
+        except RuntimeError as e:
+            # Network errors from API client
+            self.error_msg_lbl.setText(f"Eroare de rețea: {str(e)}")
+            self.error_banner.show()
         except Exception as e:
-            self.error_msg_lbl.setText(f"Eroare: {str(e)}")
+            logger.error(f"Error in refresh_data: {e}")
+            self.error_msg_lbl.setText("Eroare la încărcarea datelor")
             self.error_banner.show()
 
     def _render_achievements(self, achievements: list):

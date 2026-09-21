@@ -56,11 +56,18 @@ def run_code(request: CodeRunRequest) -> ExecutionResult:
     Execută un fragment de cod Python într-un container ephemer Docker (sau fallback securizat dacă Docker nu rulează).
     Limitează memoria la 128MB, CPU la 0.5 nuclee, dezactivează rețeaua și forțează timeout după 3-5 secunde.
     """
-    return sandbox_service.run_code(
-        code=request.code,
-        input_data=request.input_data or "",
-        timeout=request.timeout,
-    )
+    try:
+        return sandbox_service.run_code(
+            code=request.code,
+            input_data=request.input_data or "",
+            timeout=request.timeout,
+        )
+    except Exception as e:
+        logger.error(f"Error in run_code: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Eroare la executarea codului: {str(e)}"
+        )
 
 
 @router.post("/test", response_model=TestSuiteResult, summary="Testează cod Python împotriva unei suite de teste")
@@ -72,45 +79,54 @@ def test_code(
     Rulează codul împotriva unei liste de cazuri de test (fie furnizate direct în request, fie extrase din baza de date pentru un exercise_id).
     Fiecare test rulează cu stdin-ul setat la input_data corespunzător și compară ieșirea cu expected_output.
     """
-    cases_to_run: List[TestCaseItem] = []
+    try:
+        cases_to_run: List[TestCaseItem] = []
 
-    if request.test_cases:
-        cases_to_run = [
-            TestCaseItem(
-                id=tc.id,
-                input_data=tc.input_data or "",
-                expected_output=tc.expected_output,
-                is_hidden=bool(tc.is_hidden),
-            )
-            for tc in request.test_cases
-        ]
-    elif request.exercise_id:
-        db_cases = db.query(TestCase).filter(TestCase.assignment_id == request.exercise_id).all()
-        if not db_cases:
+        if request.test_cases:
+            cases_to_run = [
+                TestCaseItem(
+                    id=tc.id,
+                    input_data=tc.input_data or "",
+                    expected_output=tc.expected_output,
+                    is_hidden=bool(tc.is_hidden),
+                )
+                for tc in request.test_cases
+            ]
+        elif request.exercise_id:
+            db_cases = db.query(TestCase).filter(TestCase.assignment_id == request.exercise_id).all()
+            if not db_cases:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Nu s-au găsit cazuri de test pentru exercițiul {request.exercise_id}",
+                )
+            cases_to_run = [
+                TestCaseItem(
+                    id=tc.id,
+                    input_data=tc.input_data or "",
+                    expected_output=tc.expected_output,
+                    is_hidden=bool(tc.is_hidden),
+                )
+                for tc in db_cases
+            ]
+        else:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Nu s-au găsit cazuri de test pentru exercițiul {request.exercise_id}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Trebuie furnizat fie 'test_cases', fie 'exercise_id'.",
             )
-        cases_to_run = [
-            TestCaseItem(
-                id=tc.id,
-                input_data=tc.input_data or "",
-                expected_output=tc.expected_output,
-                is_hidden=bool(tc.is_hidden),
-            )
-            for tc in db_cases
-        ]
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Trebuie furnizat fie 'test_cases', fie 'exercise_id'.",
-        )
 
-    return sandbox_service.run_test_cases(
-        code=request.code,
-        test_cases=cases_to_run,
-        timeout=request.timeout,
-    )
+        return sandbox_service.run_test_cases(
+            code=request.code,
+            test_cases=cases_to_run,
+            timeout=request.timeout,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in test_code: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Eroare la testarea codului: {str(e)}"
+        )
 
 
 @router.get("/status", summary="Starea serviciului Docker Sandbox")
@@ -151,54 +167,63 @@ def submit_code(
     """
     Execută codul în Sandbox și acordă XP, actualizează streak-ul și deblochează insigne dacă testele trec.
     """
-    from app.services import gamification_service
-    from app.models.assignment import Assignment
+    try:
+        from app.services import gamification_service
+        from app.models.assignment import Assignment
 
-    db_cases = db.query(TestCase).filter(TestCase.assignment_id == request.exercise_id).all()
-    test_cases_items = [
-        TestCaseItem(
-            id=tc.id,
-            input_data=tc.input_data or "",
-            expected_output=tc.expected_output,
-            is_hidden=bool(tc.is_hidden)
+        db_cases = db.query(TestCase).filter(TestCase.assignment_id == request.exercise_id).all()
+        test_cases_items = [
+            TestCaseItem(
+                id=tc.id,
+                input_data=tc.input_data or "",
+                expected_output=tc.expected_output,
+                is_hidden=bool(tc.is_hidden)
+            )
+            for tc in db_cases
+        ]
+
+        suite_res = sandbox_service.run_test_cases(request.code, test_cases_items, timeout=request.timeout)
+        total_exec_time = sum(r.execution_time_ms for r in suite_res.results) if suite_res.results else 0.0
+
+        target_user_id = request.user_id
+        if not target_user_id:
+            first_student = db.query(Student).filter(Student.role == "student").first()
+            if first_student:
+                target_user_id = first_student.id
+
+        gamification_result = None
+        if target_user_id:
+            gamification_result = gamification_service.record_submission_and_award_xp(
+                db=db,
+                student_id=target_user_id,
+                assignment_id=request.exercise_id,
+                code=request.code,
+                passed=suite_res.all_passed,
+                execution_time_ms=total_exec_time,
+            )
+
+        return {
+            "status": "success" if suite_res.all_passed else "failed",
+            "all_passed": suite_res.all_passed,
+            "score": suite_res.score,
+            "passed_count": suite_res.passed_count,
+            "total_count": suite_res.total_count,
+            "results": [r.model_dump() for r in suite_res.results],
+            "runner": suite_res.runner,
+            "gamification": gamification_result,
+            "xp_awarded": gamification_result.get("xp_awarded", 0) if gamification_result else 0,
+            "total_xp": gamification_result.get("total_xp", 0) if gamification_result else 0,
+            "level": gamification_result.get("level", 1) if gamification_result else 1,
+            "level_up": gamification_result.get("level_up", False) if gamification_result else False,
+            "new_level": gamification_result.get("new_level", 1) if gamification_result else 1,
+            "newly_unlocked_badges": gamification_result.get("newly_unlocked_badges", []) if gamification_result else [],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in submit_code: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Eroare la trimiterea soluției: {str(e)}"
         )
-        for tc in db_cases
-    ]
-
-    suite_res = sandbox_service.run_test_cases(request.code, test_cases_items, timeout=request.timeout)
-    total_exec_time = sum(r.execution_time_ms for r in suite_res.results) if suite_res.results else 0.0
-
-    target_user_id = request.user_id
-    if not target_user_id:
-        first_student = db.query(Student).filter(Student.role == "student").first()
-        if first_student:
-            target_user_id = first_student.id
-
-    gamification_result = None
-    if target_user_id:
-        gamification_result = gamification_service.record_submission_and_award_xp(
-            db=db,
-            student_id=target_user_id,
-            assignment_id=request.exercise_id,
-            code=request.code,
-            passed=suite_res.all_passed,
-            execution_time_ms=total_exec_time,
-        )
-
-    return {
-        "status": "success" if suite_res.all_passed else "failed",
-        "all_passed": suite_res.all_passed,
-        "score": suite_res.score,
-        "passed_count": suite_res.passed_count,
-        "total_count": suite_res.total_count,
-        "results": [r.model_dump() for r in suite_res.results],
-        "runner": suite_res.runner,
-        "gamification": gamification_result,
-        "xp_awarded": gamification_result.get("xp_awarded", 0) if gamification_result else 0,
-        "total_xp": gamification_result.get("total_xp", 0) if gamification_result else 0,
-        "level": gamification_result.get("level", 1) if gamification_result else 1,
-        "level_up": gamification_result.get("level_up", False) if gamification_result else False,
-        "new_level": gamification_result.get("new_level", 1) if gamification_result else 1,
-        "newly_unlocked_badges": gamification_result.get("newly_unlocked_badges", []) if gamification_result else [],
-    }
 

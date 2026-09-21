@@ -14,7 +14,7 @@ class Assignment(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     starter_code = Column(Text, nullable=True)
-    old_test_cases_data = Column(Text, nullable=True)  # Redenumit pentru a evita conflictul
+    test_cases = Column(Text, nullable=True)  # JSON curriculum tests (init_db)
     max_score = Column(Float, default=100.0)
     due_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

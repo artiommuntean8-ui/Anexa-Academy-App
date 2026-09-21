@@ -7,7 +7,9 @@ from app.models.enrollment import Enrollment
 from app.models.assignment import Assignment
 from app.models.grade import Grade
 from app.models.achievement import Achievement, StudentAchievement
-from app.models.gamification import Badge, UserBadge
+from app.models.gamification import Badge, UserBadge, Submission
+from app.models.test_case import TestCase
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "Student",
@@ -20,4 +22,7 @@ __all__ = [
     "StudentAchievement",
     "Badge",
     "UserBadge",
+    "Submission",
+    "TestCase",
+    "AuditLog",
 ]

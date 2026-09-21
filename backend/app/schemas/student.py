@@ -30,6 +30,9 @@ class StudentUpdate(BaseModel):
 
 class StudentResponse(StudentBase):
     id: int
+    xp: int = 0
+    level: int = 1
+    streak_days: int = 0
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
 

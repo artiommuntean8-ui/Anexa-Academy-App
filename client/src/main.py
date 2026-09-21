@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import sys
 import os
+import logging
 
 # Adăugăm rădăcina proiectului în sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -25,6 +26,9 @@ from client.src.views.exercise_view import ExerciseView
 from client.src.views.sandbox_view import SandboxView
 from client.src.views.student_management_view import StudentManagementView
 from client.src.services.auth_service import auth
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("client.main")
 
 
 class MainWindow(QMainWindow):
@@ -95,21 +99,33 @@ class MainWindow(QMainWindow):
         self.sidebar.update_notifications()
 
     def _on_login_success(self):
-        self.sidebar.update_user_info()
-        self.sidebar.update_sidebar_visibility()
-        self.root_stack.setCurrentIndex(1)
-        self._on_page_changed(0)
+        try:
+            self.sidebar.update_user_info()
+            self.sidebar.update_sidebar_visibility()
+            self.root_stack.setCurrentIndex(1)
+            self._on_page_changed(0)
+        except Exception as e:
+            logger.error(f"Error in login success handler: {e}")
 
     def _on_logout(self):
-        auth.logout()
-        self.root_stack.setCurrentIndex(0)
+        try:
+            auth.logout()
+            self.root_stack.setCurrentIndex(0)
+        except Exception as e:
+            logger.error(f"Error in logout handler: {e}")
 
     def _on_page_changed(self, index):
-        self.views_stack.setCurrentIndex(index)
-        
+        try:
+            self.views_stack.setCurrentIndex(index)
+        except Exception as e:
+            logger.error(f"Error in page change handler: {e}")
+
     def show_exercise(self, data):
-        self.exercise_view.exercise = data
-        self.views_stack.setCurrentIndex(5)
+        try:
+            self.exercise_view.exercise = data
+            self.views_stack.setCurrentIndex(5)
+        except Exception as e:
+            logger.error(f"Error showing exercise: {e}")
 
 def main():
     app = QApplication(sys.argv)

@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
+import logging
+
+logger = logging.getLogger("client.header")
 
 
 class Header(QWidget):
@@ -89,10 +92,13 @@ class Header(QWidget):
         layout.addWidget(self.refresh_btn)
 
     def set_title(self, title: str, subtitle: str = "", breadcrumb: str = ""):
-        self.title_label.setText(title)
-        if subtitle:
-            self.subtitle_label.setText(subtitle)
-        if breadcrumb:
-            self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {breadcrumb.upper()}")
-        else:
-            self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {title.upper()}")
+        try:
+            self.title_label.setText(title)
+            if subtitle:
+                self.subtitle_label.setText(subtitle)
+            if breadcrumb:
+                self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {breadcrumb.upper()}")
+            else:
+                self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {title.upper()}")
+        except Exception as e:
+            logger.error(f"Error setting header title: {e}")

@@ -24,28 +24,36 @@ def login_json(
     Authenticate a student or admin via JSON payload.
     Returns access token and student profile.
     """
-    student = db.query(Student).filter(Student.email == login_data.email).first()
-    if not student or not verify_password(login_data.password, student.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not student.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive student account",
-        )
+    try:
+        student = db.query(Student).filter(Student.email == login_data.email).first()
+        if not student or not verify_password(login_data.password, student.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not student.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Inactive student account",
+            )
 
-    access_token = create_access_token(
-        subject=student.id,
-        extra_claims={"role": student.role, "email": student.email}
-    )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": student,
-    }
+        access_token = create_access_token(
+            subject=student.id,
+            extra_claims={"role": student.role, "email": student.email}
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": student,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error during login: {str(e)}"
+        )
 
 
 @router.post("/login/access-token", response_model=TokenSwagger, summary="Swagger OAuth2 Login Form")
@@ -57,27 +65,35 @@ def login_access_token(
     OAuth2 compatible token login, for Swagger UI interactivity.
     `username` parameter represents the student email.
     """
-    student = db.query(Student).filter(Student.email == form_data.username).first()
-    if not student or not verify_password(form_data.password, student.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not student.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive student account"
-        )
+    try:
+        student = db.query(Student).filter(Student.email == form_data.username).first()
+        if not student or not verify_password(form_data.password, student.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not student.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Inactive student account"
+            )
 
-    access_token = create_access_token(
-        subject=student.id,
-        extra_claims={"role": student.role, "email": student.email}
-    )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+        access_token = create_access_token(
+            subject=student.id,
+            extra_claims={"role": student.role, "email": student.email}
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error during login: {str(e)}"
+        )
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED, summary="Student Registration")
@@ -88,45 +104,54 @@ def register(
     """
     Register a new student account with hashed password.
     """
-    if db.query(Student).filter(Student.student_code == register_in.student_code).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Student code '{register_in.student_code}' is already registered."
+    try:
+        if db.query(Student).filter(Student.student_code == register_in.student_code).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Student code '{register_in.student_code}' is already registered."
+            )
+        if db.query(Student).filter(Student.email == register_in.email).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Email '{register_in.email}' is already registered."
+            )
+
+        student = Student(
+            student_code=register_in.student_code,
+            full_name=register_in.full_name,
+            email=register_in.email,
+            hashed_password=get_password_hash(register_in.password),
+            department=register_in.department,
+            semester=register_in.semester,
+            role="student",
+            is_active=True
         )
-    if db.query(Student).filter(Student.email == register_in.email).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Email '{register_in.email}' is already registered."
+        db.add(student)
+        db.commit()
+        db.refresh(student)
+
+        modules = db.query(Course).all()
+        for module in modules:
+            db.add(Enrollment(student_id=student.id, course_id=module.id, status="active"))
+        db.commit()
+
+        access_token = create_access_token(
+            subject=student.id,
+            extra_claims={"role": student.role, "email": student.email}
         )
-
-    student = Student(
-        student_code=register_in.student_code,
-        full_name=register_in.full_name,
-        email=register_in.email,
-        hashed_password=get_password_hash(register_in.password),
-        department=register_in.department,
-        semester=register_in.semester,
-        role="student",
-        is_active=True
-    )
-    db.add(student)
-    db.commit()
-    db.refresh(student)
-
-    modules = db.query(Course).all()
-    for module in modules:
-        db.add(Enrollment(student_id=student.id, course_id=module.id, status="active"))
-    db.commit()
-
-    access_token = create_access_token(
-        subject=student.id,
-        extra_claims={"role": student.role, "email": student.email}
-    )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": student,
-    }
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": student,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error during registration: {str(e)}"
+        )
 
 
 @router.get("/me", response_model=StudentResponse, summary="Get Current Authenticated User")

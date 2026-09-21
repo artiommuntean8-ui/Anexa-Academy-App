@@ -52,14 +52,16 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-from app.api.v1.endpoints import sandbox, gamification
+from app.api.v1.endpoints import sandbox, gamification, auth, ai_hints, reports
 
 # Include API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
-# Include direct /api/sandbox route alias
+# Compatibility aliases expected by desktop client / QA plan
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(sandbox.router, prefix="/api/sandbox", tags=["Sandbox"])
-# Include direct /api/gamification route alias
+app.include_router(ai_hints.router, prefix="/api/ai", tags=["AI Hints"])
 app.include_router(gamification.router, prefix="/api/gamification", tags=["Gamification"])
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 
 
 

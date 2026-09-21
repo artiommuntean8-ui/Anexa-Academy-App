@@ -3,10 +3,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebSockets import QWebSocket
+import logging
 from client.src.components.code_editor import CodeEditor
 from client.src.services.api_client import api
 from client.src.components.toast import ToastNotification
 from client.src.services.auth_service import auth
+
+logger = logging.getLogger("client.exercise_view")
 
 class ExerciseView(QWidget):
     def __init__(self, exercise_data=None, parent=None):
@@ -36,8 +39,12 @@ class ExerciseView(QWidget):
         # WebSocket Setup for Live Coding Feed
         self.socket = QWebSocket()
         user_id = auth.current_user.get("id") if auth.current_user else 0
-        self.socket.open(QUrl(f"ws://127.0.0.1:8000/api/v1/notifications/ws/{user_id}"))
-        self.editor.text_changed.connect(self.send_live_code)
+        try:
+            self.socket.open(QUrl(f"ws://127.0.0.1:8000/api/v1/notifications/ws/{user_id}"))
+            self.editor.text_changed.connect(self.send_live_code)
+        except Exception as e:
+            logger.error(f"WebSocket connection error: {e}")
+            # Continue without WebSocket - it's optional
 
         # Submit Button
         self.submit_btn = QPushButton("Trimite Soluția")
@@ -83,20 +90,25 @@ class ExerciseView(QWidget):
 
     def submit_code(self):
         code = self.editor.toPlainText()
-        
+
         try:
             # Apelăm endpoint-ul real de validare
             result = api.post("/exercises/validate", json_data={"code": code, "exercise_id": self.exercise.get("id")})
-            
+
             if result.get("status") == "success":
                 msg = f"✅ {result.get('message')}"
             else:
                 msg = f"❌ {result.get('message')}"
-            
+
             # Afișăm toast-ul
             toast = ToastNotification(msg, self)
             toast.show_toast(self.width() // 2 - 100, self.height() - 60)
-                
+
+        except RuntimeError as e:
+            # Network errors from API client
+            toast = ToastNotification(f"❌ Eroare de rețea: {str(e)}", self)
+            toast.show_toast(self.width() // 2 - 100, self.height() - 60)
         except Exception as e:
-            toast = ToastNotification(f"❌ Eroare: {str(e)}", self)
+            logger.error(f"Submit code error: {e}")
+            toast = ToastNotification(f"❌ Eroare la trimitere: {str(e)}", self)
             toast.show_toast(self.width() // 2 - 100, self.height() - 60)

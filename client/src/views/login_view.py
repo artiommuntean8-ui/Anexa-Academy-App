@@ -3,8 +3,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
+import logging
 from client.src.services.auth_service import auth
 from client.src.styles.theme import COLORS
+
+logger = logging.getLogger("client.login_view")
 
 class LoginView(QWidget):
     login_successful = Signal()
@@ -70,6 +73,11 @@ class LoginView(QWidget):
         try:
             auth.login(email, password)
             self.login_successful.emit()
-        except Exception as e:
+        except RuntimeError as e:
+            # Network errors from API client
             self.error_lbl.setText(str(e))
+            self.error_lbl.show()
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            self.error_lbl.setText("Eroare la autentificare. Verificați datele și conexiunea.")
             self.error_lbl.show()

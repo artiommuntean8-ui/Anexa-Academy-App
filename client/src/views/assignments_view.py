@@ -4,11 +4,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
+import logging
 from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 from client.src.views.add_assignment_dialog import AddAssignmentDialog
+
+logger = logging.getLogger("client.assignments_view")
 
 
 class AssignmentsView(QWidget):
@@ -144,8 +147,13 @@ class AssignmentsView(QWidget):
             grades_list = api.get("/grades/", params={"student_id": student_id})
             self.student_grades = {g["assignment_id"]: g for g in grades_list}
             self._render_table()
+        except RuntimeError as e:
+            # Network errors from API client
+            logger.error(f"Network error loading assignments: {e}")
+            print(f"Eroare de rețea la încărcarea temelor: {e}")
         except Exception as e:
-            print(f"Error loading assignments: {e}")
+            logger.error(f"Error loading assignments: {e}")
+            print(f"Eroare la încărcarea temelor: {e}")
 
     def _render_table(self):
         self.table.setRowCount(len(self.all_assignments))

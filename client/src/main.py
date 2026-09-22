@@ -7,7 +7,7 @@ import logging
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget
+    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget, QSizePolicy
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -44,9 +44,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f'{APP_NAME} - v{APP_VERSION}')
-        self.resize(1220, 800)
+        
+        # Set minimum size and responsive policies
+        self.setMinimumSize(1200, 800)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Apply global dark theme stylesheet
+        self.setStyleSheet(DARK_THEME_QSS)
+        
+        # Start maximized for full screen experience
+        self.showMaximized()
 
         self.root_stack = QStackedWidget(self)
+        self.root_stack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCentralWidget(self.root_stack)
 
         self.login_view = LoginView()
@@ -54,8 +64,10 @@ class MainWindow(QMainWindow):
         self.root_stack.addWidget(self.login_view)
 
         self.app_container = QWidget()
+        self.app_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         app_layout = QHBoxLayout(self.app_container)
         app_layout.setContentsMargins(0, 0, 0, 0)
+        app_layout.setSpacing(0)
         
         self.sidebar = Sidebar()
         self.sidebar.page_changed.connect(self._on_page_changed)
@@ -63,12 +75,16 @@ class MainWindow(QMainWindow):
         app_layout.addWidget(self.sidebar)
 
         content_area = QWidget()
+        content_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         content_layout = QVBoxLayout(content_area)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
         
         self.header = Header()
         content_layout.addWidget(self.header)
 
         self.views_stack = QStackedWidget()
+        self.views_stack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.dashboard_view = DashboardView()
         self.courses_view = CoursesView()
         self.assignments_view = AssignmentsView()

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QProgressBar
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSizePolicy
 from PySide6.QtGui import QCursor
 import logging
 from client.src.components.progress_card import ProgressCard
@@ -13,6 +13,7 @@ from client.src.components.achievement_card import AchievementCard
 from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
+from client.src.styles.theme import COLORS
 
 logger = logging.getLogger("client.dashboard_view")
 
@@ -23,16 +24,20 @@ class DashboardView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("DashboardView")
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: none; background-color: #090d16; }")
+        scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         container = QWidget()
         container.setStyleSheet("background-color: #090d16;")
+        container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layout = QVBoxLayout(container)
         self.layout.setContentsMargins(28, 24, 28, 28)
         self.layout.setSpacing(24)

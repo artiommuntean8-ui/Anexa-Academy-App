@@ -2,7 +2,7 @@ from typing import List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSizePolicy
 from PySide6.QtGui import QCursor
 import logging
 from client.src.components.badge import StatusBadge
@@ -11,6 +11,7 @@ from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 from client.src.views.add_assignment_dialog import AddAssignmentDialog
+from client.src.styles.theme import COLORS
 
 logger = logging.getLogger("client.assignments_view")
 
@@ -21,18 +22,22 @@ class AssignmentsView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("AssignmentsView")
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.all_assignments: List[dict] = []
         self.student_grades: dict = {}  # assignment_id -> grade_data
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         scroll.setStyleSheet("QScrollArea { border: none; background-color: #090d16; }")
 
         container = QWidget()
+        container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         container.setStyleSheet("background-color: #090d16;")
         self.layout = QVBoxLayout(container)
         self.layout.setContentsMargins(28, 24, 28, 28)

@@ -5,13 +5,71 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend
 
 import app.models  # noqa: F401 — register all ORM tables
 from app.db.session import engine, SessionLocal, Base
-from app.db.init_db import seed_demo_data
 from app.core.security import get_password_hash
 from app.models.student import Student
 from app.models.course import Course
 from app.models.assignment import Assignment
 from app.models.test_case import TestCase
 from app.models.enrollment import Enrollment
+from app.models.gamification import Badge as BadgeModel
+
+
+def seed_demo_data(db):
+    """Seed demo data for the application."""
+    # Create default badges
+    badges_data = [
+        {"code": "FIRST_BLOOD", "title": "First Blood", "description": "Prima soluție corectă", "icon_name": "first_blood", "xp_reward": 25},
+        {"code": "PERFECT_ATTEMPT", "title": "Perfect Attempt", "description": "Soluție corectă din prima încercare", "icon_name": "perfect", "xp_reward": 15},
+        {"code": "SPEED_DEMON", "title": "Speed Demon", "description": "Soluție rapidă (<300ms)", "icon_name": "speed", "xp_reward": 20},
+        {"code": "STREAK_3", "title": "3-Day Streak", "description": "3 zile consecutive de activitate", "icon_name": "streak", "xp_reward": 30},
+        {"code": "PYTHON_PRO", "title": "Python Pro", "description": "300+ XP acumulate", "icon_name": "pro", "xp_reward": 50},
+    ]
+
+    for badge_data in badges_data:
+        existing = db.query(BadgeModel).filter(BadgeModel.code == badge_data["code"]).first()
+        if not existing:
+            db.add(BadgeModel(**badge_data))
+
+    # Create demo users
+    users = [
+        Student(
+            student_code="PROF001",
+            full_name="Mihail Potlog",
+            email="profesor@anexa.md",
+            hashed_password=get_password_hash("profesor123"),
+            department="Inginerie Software",
+            semester=1,
+            role="instructor",
+            is_active=True
+        ),
+        Student(
+            student_code="STU001",
+            full_name="Artiom Muntean",
+            email="artiom@anexa.md",
+            hashed_password=get_password_hash("student123"),
+            department="Inginerie Software",
+            semester=1,
+            role="student",
+            is_active=True
+        ),
+        Student(
+            student_code="STU002",
+            full_name="Elev Test",
+            email="elev@anexa.md",
+            hashed_password=get_password_hash("student123"),
+            department="Inginerie Software",
+            semester=1,
+            role="student",
+            is_active=True
+        ),
+    ]
+
+    for user in users:
+        existing = db.query(Student).filter(Student.email == user.email).first()
+        if not existing:
+            db.add(user)
+
+    db.commit()
 
 
 def _ensure_anexa_lab_course(db) -> Course:
@@ -98,17 +156,6 @@ def seed_db():
                 db.add(Enrollment(student_id=student.id, course_id=course.id, status="active"))
         db.commit()
 
-        # Guarantee documented credentials (hash refresh)
-        for email, password in (
-            ("profesor@anexa.md", "profesor123"),
-            ("artiom@anexa.md", "student123"),
-            ("elev@anexa.md", "student123"),
-        ):
-            user = db.query(Student).filter(Student.email == email).first()
-            if user:
-                user.hashed_password = get_password_hash(password)
-        db.commit()
-
         print("[SUCCESS] Baza de date a fost populata cu succes!")
         print("Credentiale:")
         print("Instructor: profesor@anexa.md / profesor123")
@@ -120,6 +167,11 @@ def seed_db():
         raise
     finally:
         db.close()
+
+
+def init_db():
+    """Initialize database schema without dropping data."""
+    Base.metadata.create_all(bind=engine)
 
 
 if __name__ == "__main__":

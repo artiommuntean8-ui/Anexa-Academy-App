@@ -4,10 +4,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
+import logging
 from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
+
+logger = logging.getLogger("client.courses_view")
 
 
 class CoursesView(QWidget):
@@ -141,13 +145,46 @@ class CoursesView(QWidget):
             return
 
         student_id = user.get("id")
+        # Use async API calls to avoid UI blocking
+        api.get("/courses/",
+                callback=self._on_courses_loaded,
+                error_callback=self._on_courses_error)
+
+    def _on_courses_loaded(self, courses):
         try:
-            self.all_courses = api.get("/courses/")
-            dash = api.get(f"/students/{student_id}/dashboard")
+            self.all_courses = courses
+            user = auth.current_user
+            if user:
+                student_id = user.get("id")
+                api.get(f"/students/{student_id}/dashboard",
+                        callback=self._on_dashboard_loaded,
+                        error_callback=self._on_dashboard_error)
+            else:
+                self.enrolled_ids = set()
+                self._apply_filters()
+        except Exception as e:
+            logger.error(f"Error processing courses data: {e}")
+
+    def _on_courses_error(self, error_msg):
+        logger.error(f"Courses load error: {error_msg}")
+        ToastManager.show_error(f"Eroare la încărcarea cursurilor: {error_msg}", parent=self)
+        self.all_courses = []
+        self.enrolled_ids = set()
+        self._apply_filters()
+
+    def _on_dashboard_loaded(self, dash):
+        try:
             self.enrolled_ids = {c["id"] for c in dash.get("enrolled_courses", [])}
             self._apply_filters()
         except Exception as e:
-            print(f"Error loading courses: {e}")
+            logger.error(f"Error processing dashboard data: {e}")
+            self.enrolled_ids = set()
+            self._apply_filters()
+
+    def _on_dashboard_error(self, error_msg):
+        logger.error(f"Dashboard load error: {error_msg}")
+        self.enrolled_ids = set()
+        self._apply_filters()
 
     def _apply_filters(self):
         query = self.search_input.text().strip().lower()

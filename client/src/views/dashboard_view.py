@@ -10,6 +10,7 @@ from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
 from client.src.components.xp_bar import XPBar
 from client.src.components.achievement_card import AchievementCard
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 
@@ -134,9 +135,14 @@ class DashboardView(QWidget):
         self.wb_title.setText(f"Salut, {user.get('full_name', 'Student')}! 🎉")
         self.wb_sub.setText(f"Departament: {user.get('department', 'Software Engineering')} • Semestrul {user.get('semester', 1)}")
 
+        # Use async API calls to avoid UI blocking
+        api.get(f"/students/{student_id}/dashboard",
+                callback=self._on_dashboard_loaded,
+                error_callback=self._on_dashboard_error)
+
+    def _on_dashboard_loaded(self, dash):
         try:
             self.error_banner.hide()
-            dash = api.get(f"/students/{student_id}/dashboard")
             enrolled = dash.get("enrolled_courses", [])
             avg_grade = dash.get("average_grade", 0.0)
             total_credits = dash.get("total_credits", 0)
@@ -146,47 +152,77 @@ class DashboardView(QWidget):
             self.card_gpa.set_value(f"{avg_grade:.1f}" if avg_grade > 0 else "-")
 
             # Try to get progress metrics
-            try:
-                prog = api.get("/students/me/progress")
-                completed = prog.get("completed_lessons", 0)
-                total = prog.get("total_lessons", max(1, len(enrolled) * 4))
-                pct = prog.get("overall_progress_percent", 0)
-                modules_data = prog.get("modules", [])
-            except Exception as e:
-                logger.error(f"Error loading progress: {e}")
-                completed = len(dash.get("recent_grades", []))
-                total = max(1, len(enrolled) * 4)
-                pct = int((completed / total) * 100) if total else 0
-                modules_data = []
+            api.get("/students/me/progress",
+                    callback=lambda prog: self._on_progress_loaded(prog, enrolled, avg_grade, total_credits),
+                    error_callback=lambda err: self._on_progress_error(err, enrolled, avg_grade, total_credits))
+
+        except Exception as e:
+            logger.error(f"Error processing dashboard data: {e}")
+            self.error_msg_lbl.setText("Eroare la procesarea datelor")
+            self.error_banner.show()
+
+    def _on_dashboard_error(self, error_msg):
+        logger.error(f"Dashboard load error: {error_msg}")
+        self.error_msg_lbl.setText(f"Eroare: {error_msg}")
+        self.error_banner.show()
+        ToastManager.show_error(f"Eroare la încărcarea datelor: {error_msg}", parent=self)
+
+    def _on_progress_loaded(self, prog, enrolled, avg_grade, total_credits):
+        try:
+            completed = prog.get("completed_lessons", 0)
+            total = prog.get("total_lessons", max(1, len(enrolled) * 4))
+            pct = prog.get("overall_progress_percent", 0)
+            modules_data = prog.get("modules", [])
 
             self.card_assignments.set_value(str(completed))
             self.progress_card.set_progress(current_credits=total_credits, total_target_credits=30, gpa=avg_grade)
 
             # Update XP Bar & Achievements
-            try:
-                ach_data = api.get("/achievements/my")
-                stats = ach_data.get("stats", {})
-                self.xp_bar.set_stats(
-                    level=stats.get("level", 1),
-                    title=stats.get("title", "Începător Python"),
-                    xp_in_level=stats.get("xp_in_level", 0),
-                    next_level_xp=stats.get("next_level_xp", 200),
-                    total_xp=stats.get("total_xp", 0)
-                )
-                self._render_achievements(ach_data.get("achievements", []))
-            except Exception as e:
-                logger.error(f"Error loading achievements: {e}")
+            api.get("/achievements/my",
+                    callback=lambda ach_data: self._on_achievements_loaded(ach_data, modules_data, enrolled),
+                    error_callback=lambda err: self._on_achievements_error(err, modules_data, enrolled))
 
+        except Exception as e:
+            logger.error(f"Error processing progress data: {e}")
+            # Fallback with dashboard data
+            completed = len(enrolled) if enrolled else 0
+            total = max(1, len(enrolled) * 4) if enrolled else 1
+            pct = int((completed / total) * 100) if total else 0
+            modules_data = []
+            self.card_assignments.set_value(str(completed))
+            self.progress_card.set_progress(current_credits=total_credits, total_target_credits=30, gpa=avg_grade)
             self._render_modules(modules_data if modules_data else enrolled)
 
-        except RuntimeError as e:
-            # Network errors from API client
-            self.error_msg_lbl.setText(f"Eroare de rețea: {str(e)}")
-            self.error_banner.show()
+    def _on_progress_error(self, error_msg, enrolled, avg_grade, total_credits):
+        logger.error(f"Progress load error: {error_msg}")
+        # Fallback with dashboard data
+        completed = len(enrolled) if enrolled else 0
+        total = max(1, len(enrolled) * 4) if enrolled else 1
+        pct = int((completed / total) * 100) if total else 0
+        modules_data = []
+        self.card_assignments.set_value(str(completed))
+        self.progress_card.set_progress(current_credits=total_credits, total_target_credits=30, gpa=avg_grade)
+        self._render_modules(modules_data if modules_data else enrolled)
+
+    def _on_achievements_loaded(self, ach_data, modules_data, enrolled):
+        try:
+            stats = ach_data.get("stats", {})
+            self.xp_bar.set_stats(
+                level=stats.get("level", 1),
+                title=stats.get("title", "Începător Python"),
+                xp_in_level=stats.get("xp_in_level", 0),
+                next_level_xp=stats.get("next_level_xp", 200),
+                total_xp=stats.get("total_xp", 0)
+            )
+            self._render_achievements(ach_data.get("achievements", []))
+            self._render_modules(modules_data if modules_data else enrolled)
         except Exception as e:
-            logger.error(f"Error in refresh_data: {e}")
-            self.error_msg_lbl.setText("Eroare la încărcarea datelor")
-            self.error_banner.show()
+            logger.error(f"Error processing achievements data: {e}")
+            self._render_modules(modules_data if modules_data else enrolled)
+
+    def _on_achievements_error(self, error_msg, modules_data, enrolled):
+        logger.error(f"Achievements load error: {error_msg}")
+        self._render_modules(modules_data if modules_data else enrolled)
 
     def _render_achievements(self, achievements: list):
         while self.achievements_container.count():

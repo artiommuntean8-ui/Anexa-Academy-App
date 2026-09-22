@@ -7,6 +7,7 @@ from PySide6.QtGui import QCursor
 import logging
 from client.src.components.badge import StatusBadge
 from client.src.components.empty_state import EmptyState
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 from client.src.views.add_assignment_dialog import AddAssignmentDialog
@@ -142,18 +143,45 @@ class AssignmentsView(QWidget):
             self.add_btn.hide()
 
         student_id = user.get("id")
+        # Use async API calls to avoid UI blocking
+        api.get("/assignments/",
+                callback=self._on_assignments_loaded,
+                error_callback=self._on_assignments_error)
+
+    def _on_assignments_loaded(self, assignments):
         try:
-            self.all_assignments = api.get("/assignments/")
-            grades_list = api.get("/grades/", params={"student_id": student_id})
+            self.all_assignments = assignments
+            user = auth.current_user
+            if user:
+                student_id = user.get("id")
+                api.get("/grades/", params={"student_id": student_id},
+                        callback=self._on_grades_loaded,
+                        error_callback=self._on_grades_error)
+            else:
+                self._render_table()
+        except Exception as e:
+            logger.error(f"Error processing assignments: {e}")
+            self._render_table()
+
+    def _on_assignments_error(self, error_msg):
+        logger.error(f"Assignments load error: {error_msg}")
+        print(f"Eroare la încărcarea temelor: {error_msg}")
+        ToastManager.show_error(f"Eroare la încărcarea temelor: {error_msg}", parent=self)
+        self.all_assignments = []
+        self._render_table()
+
+    def _on_grades_loaded(self, grades_list):
+        try:
             self.student_grades = {g["assignment_id"]: g for g in grades_list}
             self._render_table()
-        except RuntimeError as e:
-            # Network errors from API client
-            logger.error(f"Network error loading assignments: {e}")
-            print(f"Eroare de rețea la încărcarea temelor: {e}")
         except Exception as e:
-            logger.error(f"Error loading assignments: {e}")
-            print(f"Eroare la încărcarea temelor: {e}")
+            logger.error(f"Error processing grades: {e}")
+            self._render_table()
+
+    def _on_grades_error(self, error_msg):
+        logger.error(f"Grades load error: {error_msg}")
+        self.student_grades = {}
+        self._render_table()
 
     def _render_table(self):
         self.table.setRowCount(len(self.all_assignments))

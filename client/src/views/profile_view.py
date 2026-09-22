@@ -3,12 +3,16 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
+import logging
 from client.src.components.badge import StatusBadge
 from client.src.components.xp_bar import XPBar
 from client.src.components.achievement_card import AchievementCard
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
 from client.src.config import APP_NAME, APP_VERSION, API_BASE_URL
+
+logger = logging.getLogger("client.profile_view")
 
 
 class ProfileView(QWidget):
@@ -249,8 +253,12 @@ class ProfileView(QWidget):
         self.field_sem.itemAt(1).widget().setText(f"Semestrul {user.get('semester', 1)}")
 
         # Fetch Achievements and XP stats
+        api.get("/achievements/my",
+                callback=self._on_achievements_loaded,
+                error_callback=self._on_achievements_error)
+
+    def _on_achievements_loaded(self, ach_data):
         try:
-            ach_data = api.get("/achievements/my")
             stats = ach_data.get("stats", {})
             self.xp_bar.set_stats(
                 level=stats.get("level", 1),
@@ -261,7 +269,11 @@ class ProfileView(QWidget):
             )
             self._render_achievements(ach_data.get("achievements", []))
         except Exception as e:
-            print(f"Error loading profile achievements: {e}")
+            logger.error(f"Error processing achievements data: {e}")
+
+    def _on_achievements_error(self, error_msg):
+        logger.error(f"Achievements load error: {error_msg}")
+        ToastManager.show_error(f"Eroare la încărcarea realizărilor: {error_msg}", parent=self)
 
     def _render_achievements(self, achievements: list):
         # Clear existing grid
@@ -279,17 +291,36 @@ class ProfileView(QWidget):
     def _handle_password_change(self):
         new_pwd = self.new_pwd_input.text().strip()
         if len(new_pwd) < 6:
-            QMessageBox.warning(self, "Atenție", "Noua parolă trebuie să conțină cel puțin 6 caractere.")
+            ToastManager.show_error("Noua parolă trebuie să conțină cel puțin 6 caractere.", parent=self)
             return
 
         user = auth.current_user
         if not user:
+            ToastManager.show_error("Utilizator neautentificat.", parent=self)
             return
 
+        student_id = user.get("id")
+        # Disable button during operation
+        self.pwd_btn.setEnabled(False)
+        self.pwd_btn.setText("Se actualizează...")
+
+        api.put(f"/students/{student_id}",
+               json_data={"password": new_pwd},
+               callback=self._on_password_success,
+               error_callback=self._on_password_error)
+
+    def _on_password_success(self, response):
         try:
-            student_id = user.get("id")
-            api.put(f"/students/{student_id}", json_data={"password": new_pwd})
-            QMessageBox.information(self, "Succes", "Parola dumneavoastră a fost actualizată cu succes!")
+            ToastManager.show_success("Parola dumneavoastră a fost actualizată cu succes!", parent=self)
             self.new_pwd_input.clear()
         except Exception as e:
-            QMessageBox.warning(self, "Eroare", f"Nu s-a putut actualiza parola: {str(e)}")
+            logger.error(f"Error processing password change response: {e}")
+        finally:
+            self.pwd_btn.setEnabled(True)
+            self.pwd_btn.setText("Actualizează Parola")
+
+    def _on_password_error(self, error_msg):
+        logger.error(f"Password change error: {error_msg}")
+        ToastManager.show_error(f"Nu s-a putut actualiza parola: {error_msg}", parent=self)
+        self.pwd_btn.setEnabled(True)
+        self.pwd_btn.setText("Actualizează Parola")

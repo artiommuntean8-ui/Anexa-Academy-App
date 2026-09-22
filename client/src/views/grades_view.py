@@ -5,11 +5,15 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
+import logging
 from client.src.components.badge import StatusBadge
 from client.src.components.stat_card import StatCard
 from client.src.components.empty_state import EmptyState
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
 from client.src.services.auth_service import auth
+
+logger = logging.getLogger("client.grades_view")
 
 
 class GradesView(QWidget):
@@ -144,11 +148,21 @@ class GradesView(QWidget):
             return
 
         student_id = user.get("id")
+        # Use async API call to avoid UI blocking
+        api.get("/grades/", params={"student_id": student_id},
+                callback=self._on_grades_loaded,
+                error_callback=self._on_grades_error)
+
+    def _on_grades_loaded(self, grades):
         try:
-            grades = api.get("/grades/", params={"student_id": student_id})
             self._render_data(grades)
         except Exception as e:
-            print(f"Error loading grades: {e}")
+            logger.error(f"Error processing grades data: {e}")
+
+    def _on_grades_error(self, error_msg):
+        logger.error(f"Grades load error: {error_msg}")
+        ToastManager.show_error(f"Eroare la încărcarea notelor: {error_msg}", parent=self)
+        self._render_data([])
 
     def _render_data(self, grades: List[dict]):
         self.table.setRowCount(len(grades))

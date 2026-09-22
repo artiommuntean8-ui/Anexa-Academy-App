@@ -5,8 +5,8 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebSockets import QWebSocket
 import logging
 from client.src.components.code_editor import CodeEditor
+from client.src.components.toast import ToastManager
 from client.src.services.api_client import api
-from client.src.components.toast import ToastNotification
 from client.src.services.auth_service import auth
 
 logger = logging.getLogger("client.exercise_view")
@@ -91,24 +91,24 @@ class ExerciseView(QWidget):
     def submit_code(self):
         code = self.editor.toPlainText()
 
+        # Use async API call to avoid UI blocking
+        api.post("/exercises/validate",
+                json_data={"code": code, "exercise_id": self.exercise.get("id")},
+                callback=self._on_submit_success,
+                error_callback=self._on_submit_error)
+
+    def _on_submit_success(self, result):
         try:
-            # Apelăm endpoint-ul real de validare
-            result = api.post("/exercises/validate", json_data={"code": code, "exercise_id": self.exercise.get("id")})
-
             if result.get("status") == "success":
-                msg = f"✅ {result.get('message')}"
+                msg = f"✅ {result.get('message', 'Soluție validată cu succes!')}"
+                ToastManager.show_success(msg, parent=self)
             else:
-                msg = f"❌ {result.get('message')}"
-
-            # Afișăm toast-ul
-            toast = ToastNotification(msg, self)
-            toast.show_toast(self.width() // 2 - 100, self.height() - 60)
-
-        except RuntimeError as e:
-            # Network errors from API client
-            toast = ToastNotification(f"❌ Eroare de rețea: {str(e)}", self)
-            toast.show_toast(self.width() // 2 - 100, self.height() - 60)
+                msg = f"❌ {result.get('message', 'Soluția nu a trecut testele.')}"
+                ToastManager.show_error(msg, parent=self)
         except Exception as e:
-            logger.error(f"Submit code error: {e}")
-            toast = ToastNotification(f"❌ Eroare la trimitere: {str(e)}", self)
-            toast.show_toast(self.width() // 2 - 100, self.height() - 60)
+            logger.error(f"Error processing submit result: {e}")
+            ToastManager.show_error("Eroare la procesarea rezultatului", parent=self)
+
+    def _on_submit_error(self, error_msg):
+        logger.error(f"Submit code error: {error_msg}")
+        ToastManager.show_error(f"Eroare la trimitere: {error_msg}", parent=self)

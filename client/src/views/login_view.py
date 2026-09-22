@@ -6,6 +6,7 @@ from PySide6.QtGui import QCursor
 import logging
 from client.src.services.auth_service import auth
 from client.src.styles.theme import COLORS
+from client.src.components.toast import ToastManager
 
 logger = logging.getLogger("client.login_view")
 
@@ -70,14 +71,39 @@ class LoginView(QWidget):
     def _handle_login(self):
         email = self.email_input.text().strip()
         password = self.pwd_input.text().strip()
+
+        if not email or not password:
+            self.error_lbl.setText("Te rugăm să completezi toate câmpurile.")
+            self.error_lbl.show()
+            return
+
+        # Disable button during login
+        self.login_btn.setEnabled(False)
+        self.login_btn.setText("Se conectează...")
+
+        # Use async API call to avoid UI blocking
+        from client.src.services.api_client import api
+        api.post("/auth/login",
+                json_data={"email": email, "password": password},
+                callback=self._on_login_success,
+                error_callback=self._on_login_error)
+
+    def _on_login_success(self, response):
         try:
-            auth.login(email, password)
+            auth.apply_login_response(response)
             self.login_successful.emit()
-        except RuntimeError as e:
-            # Network errors from API client
-            self.error_lbl.setText(str(e))
-            self.error_lbl.show()
+            ToastManager.show_success("Autentificare reușită!", parent=self)
         except Exception as e:
-            logger.error(f"Login error: {e}")
-            self.error_lbl.setText("Eroare la autentificare. Verificați datele și conexiunea.")
-            self.error_lbl.show()
+            logger.error(f"Error processing login response: {e}")
+            self._on_login_error("Eroare la procesarea răspunsului")
+        finally:
+            self.login_btn.setEnabled(True)
+            self.login_btn.setText("Autentificare")
+
+    def _on_login_error(self, error_msg):
+        logger.error(f"Login error: {error_msg}")
+        self.error_lbl.setText(error_msg)
+        self.error_lbl.show()
+        ToastManager.show_error(f"Eroare la autentificare: {error_msg}", parent=self)
+        self.login_btn.setEnabled(True)
+        self.login_btn.setText("Autentificare")

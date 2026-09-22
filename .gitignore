@@ -25,3 +25,13 @@ Thumbs.db
 *.sqlite3
 *.db
 *.log
+
+# Build artifacts and releases
+build/
+dist/
+release/
+*.spec
+*.exe
+*.pkg
+*.dmg
+*.msi

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFrame
+    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFrame, QSizePolicy
 )
-from PySide6.QtCore import Qt, Signal, QSizePolicy
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor, QFont
 import logging
 from client.src.services.auth_service import auth

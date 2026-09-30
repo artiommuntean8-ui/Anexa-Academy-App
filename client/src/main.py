@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f'{APP_NAME} - v{APP_VERSION}')
+        self.setWindowTitle(f'{APP_NAME} - Platformă Educațională SaaS')
         
         # Set minimum size and responsive policies
         self.setMinimumSize(1200, 800)

@@ -123,7 +123,7 @@ class GradesView(QWidget):
             QMessageBox.information(self, "Export", "Nu există note de exportat.")
             return
 
-        path, _ = QFileDialog.getSaveFileName(self, "Exportă Note CSV", "note_arkitech.csv", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(self, "Exportă Note CSV", "note_anexa_academy.csv", "CSV Files (*.csv)")
         if path:
             try:
                 with open(path, 'w', newline='', encoding='utf-8') as f:

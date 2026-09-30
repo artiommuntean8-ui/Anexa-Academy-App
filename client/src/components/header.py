@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame
-from PySide6.QtCore import Qt, Signal, QSizePolicy
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QSizePolicy
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor, QFont
 import logging
 from client.src.styles.theme import COLORS
@@ -33,7 +33,7 @@ class Header(QWidget):
         text_layout.setSpacing(4)
         text_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.breadcrumb_label = QLabel("ARKITECH PORTAL  /  PANOU PRINCIPAL")
+        self.breadcrumb_label = QLabel("ANEXA ACADEMY  /  PANOU PRINCIPAL")
         self.breadcrumb_label.setStyleSheet(f"color: {COLORS['accent']}; font-size: 11px; font-weight: 700; letter-spacing: 1px; background: transparent;")
         text_layout.addWidget(self.breadcrumb_label)
 
@@ -107,8 +107,8 @@ class Header(QWidget):
             if subtitle:
                 self.subtitle_label.setText(subtitle)
             if breadcrumb:
-                self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {breadcrumb.upper()}")
+                self.breadcrumb_label.setText(f"ANEXA ACADEMY  /  {breadcrumb.upper()}")
             else:
-                self.breadcrumb_label.setText(f"ARKITECH PORTAL  /  {title.upper()}")
+                self.breadcrumb_label.setText(f"ANEXA ACADEMY  /  {title.upper()}")
         except Exception as e:
             logger.error(f"Error setting header title: {e}")

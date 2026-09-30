@@ -299,7 +299,7 @@ class CoursesView(QWidget):
             meta_layout = QHBoxLayout()
             meta_layout.setSpacing(24)
 
-            instr = QLabel(f"👨‍🏫 {c.get('instructor_name', 'Instructor ArkiTech')}")
+            instr = QLabel(f"👨‍🏫 {c.get('instructor_name', 'Instructor Anexa Academy')}")
             instr.setStyleSheet("color: #94a3b8; font-size: 12px; font-weight: 500;")
             meta_layout.addWidget(instr)
 

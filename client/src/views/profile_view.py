@@ -75,7 +75,7 @@ class ProfileView(QWidget):
         self.role_badge = StatusBadge("active", "Student Înmatriculat")
         role_row.addWidget(self.role_badge)
         
-        self.academy_tag = QLabel("Academia ArkiTech")
+        self.academy_tag = QLabel("Anexa Academy")
         self.academy_tag.setStyleSheet("color: #818cf8; font-size: 12px; font-weight: 700;")
         role_row.addWidget(self.academy_tag)
         role_row.addStretch()
@@ -92,7 +92,7 @@ class ProfileView(QWidget):
         self.details_layout.setSpacing(12)
 
         self.field_code = self._create_info_row("Cod Matricol:", "ARK-2026-001")
-        self.field_email = self._create_info_row("Email Instituțional:", "artiom.muntean@arkitech.academy")
+        self.field_email = self._create_info_row("Email Instituțional:", "artiom.muntean@anexa.academy")
         self.field_dept = self._create_info_row("Specializare / Departament:", "Software Architecture & Engineering")
         self.field_sem = self._create_info_row("Semestrul Curent:", "Semestrul 2 (Anul I)")
 
@@ -204,7 +204,7 @@ class ProfileView(QWidget):
         sys_layout = QVBoxLayout(sys_frame)
         sys_layout.setSpacing(10)
 
-        sys_title = QLabel("Despre Sistemul ArkiTech Dashboard")
+        sys_title = QLabel("Despre Sistemul Anexa Academy")
         sys_title.setStyleSheet("color: #ffffff; font-size: 15px; font-weight: 700;")
         sys_layout.addWidget(sys_title)
 
@@ -212,7 +212,7 @@ class ProfileView(QWidget):
         sys_info.setStyleSheet("color: #94a3b8; font-size: 12px;")
         sys_layout.addWidget(sys_info)
 
-        author_info = QLabel("Dezvoltat de Artiom Muntean pentru Academia ArkiTech.")
+        author_info = QLabel("Dezvoltat de Artiom Muntean pentru Anexa Academy.")
         author_info.setStyleSheet("color: #64748b; font-size: 11px;")
         sys_layout.addWidget(author_info)
 

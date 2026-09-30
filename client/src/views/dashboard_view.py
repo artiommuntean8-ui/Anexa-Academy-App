@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QProgressBar
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QProgressBar, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSizePolicy
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 import logging
 from client.src.components.progress_card import ProgressCard
@@ -76,7 +76,7 @@ class DashboardView(QWidget):
         """)
         wb_layout = QHBoxLayout(self.welcome_banner)
         wb_text = QVBoxLayout()
-        self.wb_title = QLabel("Salut, explorator ArkiTech!")
+        self.wb_title = QLabel("Salut, explorator Anexa Academy!")
         self.wb_title.setStyleSheet("color: #ffffff; font-size: 22px; font-weight: 800;")
         self.wb_sub = QLabel("Panoul tău academic este sincronizat în timp real.")
         self.wb_sub.setStyleSheet("color: #a5b4fc; font-size: 13px; font-weight: 500;")

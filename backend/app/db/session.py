@@ -18,7 +18,7 @@ def create_db_engine(url: str):
             return create_engine(url, pool_pre_ping=True)
     except (ModuleNotFoundError, Exception) as e:
         logger.warning(f"Could not initialize DB with URL '{url}': {e}. Falling back to SQLite.")
-        sqlite_url = "sqlite:///./arkitech_dashboard.db"
+        sqlite_url = "sqlite:///./anexa_academy.db"
         return create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
 engine = create_db_engine(db_url)

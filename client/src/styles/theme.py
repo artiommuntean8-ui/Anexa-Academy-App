@@ -1,43 +1,45 @@
-# Modern Dark Theme Palette for Anexa Academy
+# Premium Dark Theme Palette for Anexa Academy
 COLORS = {
     # Background Colors
-    "bg_window": "#12131C",          # Deep dark background
-    "bg_window_secondary": "#1A1B26", # Secondary background
-    "bg_card": "#202231",            # Card/Panel background
-    "bg_card_hover": "#262938",      # Card hover state
-    "bg_input": "#15171E",           # Input field background
-    "bg_sidebar": "#0F1016",         # Sidebar background
+    "bg_window": "#0F1017",              # Deep dark background
+    "bg_window_secondary": "#161822",    # Secondary background
+    "bg_card": "#1F2232",                # Card/Panel background
+    "bg_card_hover": "#26293D",          # Card hover state
+    "bg_input": "#0A0B12",               # Input field background
+    "bg_sidebar": "#08090E",             # Sidebar background
     
     # Border Colors
-    "border": "#2A2D3D",             # Default border
-    "border_light": "#3A3F52",       # Light border
-    "border_focus": "#6C5CE7",       # Focus border (accent)
+    "border": "#2E324A",                # Default border
+    "border_light": "#3A3F5A",          # Light border
+    "border_focus": "#6C5CE7",          # Focus border (accent)
     
     # Text Colors
-    "text_primary": "#FFFFFF",        # Primary text
-    "text_secondary": "#A9B1D6",     # Secondary text
-    "text_muted": "#6C728B",         # Muted text
-    "text_disabled": "#4B5563",      # Disabled text
+    "text_primary": "#FFFFFF",           # Primary text
+    "text_secondary": "#A0A5C0",        # Secondary text
+    "text_muted": "#6B7285",            # Muted text
+    "text_disabled": "#4B5563",         # Disabled text
     
-    # Accent Colors
-    "accent": "#6C5CE7",             # Primary accent (purple)
-    "accent_hover": "#7AA2F7",       # Accent hover
-    "accent_pressed": "#5B4CC5",      # Accent pressed
-    "accent_secondary": "#7AA2F7",   # Secondary accent
+    # Accent Colors - Electric Violet & Cyan
+    "accent": "#6C5CE7",                # Primary accent (Electric Violet)
+    "accent_hover": "#8C7AE6",          # Accent hover
+    "accent_pressed": "#5B4CC5",        # Accent pressed
+    "accent_secondary": "#00CEC9",      # Secondary accent (Cyan)
+    "accent_secondary_hover": "#00E5DE", # Secondary accent hover
     
     # Status Colors
-    "success": "#10B981",            # Green for success
-    "success_bg": "#064E3B",         # Success background
-    "error": "#EF4444",              # Red for error
-    "error_bg": "#7F1D1D",           # Error background
-    "warning": "#F59E0B",            # Orange for warning
-    "warning_bg": "#78350F",         # Warning background
-    "info": "#3B82F6",               # Blue for info
-    "info_bg": "#1E3A8A",            # Info background
+    "success": "#00CEC9",               # Cyan for success
+    "success_bg": "#0A3A3A",            # Success background
+    "error": "#FF6B6B",                # Red for error
+    "error_text": "#FFB8B8",           # Light red for error text
+    "error_bg": "#3A1515",              # Error background
+    "warning": "#FDCB6E",               # Orange for warning
+    "warning_bg": "#3A2A15",            # Warning background
+    "info": "#74B9FF",                 # Blue for info
+    "info_bg": "#15203A",               # Info background
     
     # Input Colors
-    "input_focus": "#6C5CE7",        # Input focus glow
-    "input_placeholder": "#6C728B",  # Input placeholder text
+    "input_focus": "#6C5CE7",           # Input focus glow
+    "input_placeholder": "#6B7285",    # Input placeholder text
 }
 
 # Modern Dark Theme QSS Stylesheet
@@ -119,16 +121,16 @@ QPushButton {{
 }}
 
 QPushButton:hover {{
-    background-color: {COLORS['accent_hover']}}
+    background-color: {COLORS['accent_hover']};
 }}
 
 QPushButton:pressed {{
-    background-color: {COLORS['accent_pressed']}}
+    background-color: {COLORS['accent_pressed']};
 }}
 
 QPushButton:disabled {{
     background-color: {COLORS['border']};
-    color: {COLORS['text_disabled']}}
+    color: {COLORS['text_disabled']};
 }}
 
 QPushButton.flat {{
@@ -140,7 +142,7 @@ QPushButton.flat {{
 QPushButton.flat:hover {{
     background-color: {COLORS['bg_card']};
     border-color: {COLORS['accent']};
-    color: {COLORS['text_primary']}}
+    color: {COLORS['text_primary']};
 }}
 
 QPushButton.danger {{

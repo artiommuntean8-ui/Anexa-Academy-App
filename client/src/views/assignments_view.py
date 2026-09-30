@@ -1,8 +1,8 @@
 from typing import List
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSizePolicy
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 import logging
 from client.src.components.badge import StatusBadge
@@ -237,7 +237,7 @@ class AssignmentsView(QWidget):
             "id": assignment.get("id"),
             "title": assignment.get("title"),
             "description": assignment.get("description", "Exercițiu practic de programare Python"),
-            "starter_code": assignment.get("starter_code", "# Scrie codul tău aici\nprint('Salut, ArkiTech!')\n")
+            "starter_code": assignment.get("starter_code", "# Scrie codul tău aici\nprint('Salut, Anexa Academy!')\n")
         }
 
         # Navigate to ExerciseView
